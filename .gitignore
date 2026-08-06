@@ -14,3 +14,4 @@ build/
 *.pyo
 *.log
 *.egg-info/
+apps/api/storage/

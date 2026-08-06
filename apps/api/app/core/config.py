@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     allowed_frontend_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"]
     )
+    media_root: str = "storage/media"
+    media_public_base_url: str = "/api/media"
+    max_upload_bytes: int = 5 * 1024 * 1024
 
     @field_validator("allowed_frontend_origins", mode="before")
     @classmethod

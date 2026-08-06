@@ -37,6 +37,10 @@ async def _clean_stage_01_tables(database_url: str) -> None:
     try:
         async with engine.begin() as connection:
             await connection.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS dessert_images CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS dessert_variants CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS desserts CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS categories CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS admin_sessions CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS admin_users CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS site_settings CASCADE"))
@@ -44,7 +48,7 @@ async def _clean_stage_01_tables(database_url: str) -> None:
         await engine.dispose()
 
 
-async def _inspect_stage_01_schema(database_url: str) -> tuple[set[str], int]:
+async def _inspect_stage_01_schema(database_url: str) -> tuple[set[str], set[str], int]:
     engine = create_async_engine(database_url)
     try:
         async with engine.connect() as connection:
@@ -65,7 +69,35 @@ async def _inspect_stage_01_schema(database_url: str) -> tuple[set[str], int]:
             singleton_count = await connection.scalar(
                 text("SELECT count(*) FROM site_settings WHERE id = 1")
             )
-            return tables, int(singleton_count or 0)
+            constraints = {
+                row[0]
+                for row in (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT conname
+                            FROM pg_constraint
+                            WHERE connamespace = 'public'::regnamespace
+                            """
+                        )
+                    )
+                )
+            }
+            indexes = {
+                row[0]
+                for row in (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT indexname
+                            FROM pg_indexes
+                            WHERE schemaname = 'public'
+                            """
+                        )
+                    )
+                )
+            }
+            return tables, constraints | indexes, int(singleton_count or 0)
     finally:
         await engine.dispose()
 
@@ -84,8 +116,25 @@ def run_migration_smoke_test() -> None:
     with migration_test_environment(database_url) as config:
         command.upgrade(config, "head")
 
-    tables, singleton_count = asyncio.run(_inspect_stage_01_schema(database_url))
-    assert {"admin_users", "admin_sessions", "site_settings", "alembic_version"} <= tables
+    tables, constraints, singleton_count = asyncio.run(_inspect_stage_01_schema(database_url))
+    assert {
+        "admin_users",
+        "admin_sessions",
+        "site_settings",
+        "categories",
+        "desserts",
+        "dessert_variants",
+        "dessert_images",
+        "alembic_version",
+    } <= tables
+    assert {
+        "uq_categories_slug",
+        "uq_desserts_slug",
+        "ck_dessert_variants_weight_positive",
+        "ck_dessert_variants_old_price_gt_price",
+        "uq_dessert_variants_active_weight",
+        "uq_dessert_images_active_primary",
+    } <= constraints
     assert singleton_count == 1
 
 

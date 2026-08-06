@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@cake-and-shape/api-client": "file:../../packages/api-client",
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"

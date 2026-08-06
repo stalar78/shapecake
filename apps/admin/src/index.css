@@ -32,7 +32,13 @@ button.secondary {
   color: #26352a;
 }
 
+button.danger {
+  background: #7f1d1d;
+  color: #fff;
+}
+
 input,
+select,
 textarea {
   border: 1px solid #d8cec1;
   border-radius: 0.85rem;
@@ -101,6 +107,58 @@ p {
 
 .settings-grid button {
   align-self: end;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.list,
+.image-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mini-card,
+.editor {
+  border: 1px solid #eadfd3;
+  border-radius: 1.25rem;
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.row-button {
+  align-items: center;
+  background: #f7f2ea;
+  color: #26352a;
+  display: flex;
+  justify-content: space-between;
+}
+
+.inline-form {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.toggles {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.mini-card img {
+  border-radius: 1rem;
+  height: 10rem;
+  object-fit: cover;
+  width: 100%;
 }
 
 .muted {

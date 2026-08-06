@@ -9,6 +9,7 @@ RUN npm config set fetch-retries 3 \
     && npm config set fetch-retry-mintimeout 10000 \
     && npm config set fetch-retry-maxtimeout 60000 \
     && npm ci --workspace apps/admin
+COPY packages/api-client packages/api-client
 COPY apps/admin apps/admin
 
 EXPOSE 5173
