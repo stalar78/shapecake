@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 01 fully accepted and runtime-verified; Stage 02 ready to start
+- Current stage: Stage 02 fully accepted and runtime-verified; Stage 03 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -44,6 +44,21 @@ Admin Vite app ─────┘              │
 - Makefile command interface;
 - successful full Docker, PostgreSQL, migration, test-suite, administrator-creation, and live endpoint verification.
 
+## Stage 02 result
+
+- category, dessert, variant and ordered-image domain;
+- archive, visibility, publication and availability invariants;
+- stable canonical slugs and controlled integrity-error mapping;
+- SQL-correct public eligibility, counting and pagination;
+- integer minor-unit prices and guarded variant uniqueness;
+- transactional one-primary-image behavior;
+- local media adapter with size, MIME, signature and path-safety controls;
+- authenticated and CSRF-protected admin CRUD and reorder operations;
+- public catalog and dessert-detail APIs and pages;
+- shared typed API client;
+- migration and comprehensive PostgreSQL integration tests;
+- successful Docker and live catalog/media smoke verification.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -51,6 +66,8 @@ Admin Vite app ─────┘              │
 - Mutating admin endpoints require CSRF protection.
 - Test schema reset requires a guarded test database and explicit `ALLOW_TEST_DATABASE_RESET=yes` opt-in.
 - Production API images exclude test tooling.
+- Uploaded filenames never control storage paths.
+- Public APIs never expose absolute media filesystem paths.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
@@ -58,10 +75,11 @@ Admin Vite app ─────┘              │
 
 - The in-memory login limiter is single-instance only and must be replaced before horizontal API scaling.
 - Alembic has a low-priority `path_separator` deprecation warning.
-- Public and admin interfaces remain foundation shells pending the design and domain stages.
+- Local media storage is development-oriented; production object storage is deferred.
+- Public and admin interfaces are functional but final Lovable-based visual design remains deferred.
 
 ## Next stage
 
-Stage 02: category, dessert, variant, and ordered-image domain implementation with public catalog read APIs and admin CRUD.
+Stage 03: customer inquiry workflow with public submission, lifecycle statuses, internal notes, authenticated administration, and notification-adapter boundary.
 
-Stage 02 does not include final Lovable-based visual design, customer requests, reviews, promotions, notifications, or production media infrastructure beyond the agreed local storage abstraction.
+Stage 03 does not include online payments, delivery integration, customer accounts, a full CRM, final visual design, or production notification infrastructure beyond the agreed adapter boundary.
