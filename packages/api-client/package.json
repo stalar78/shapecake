@@ -1,0 +1,12 @@
+{
+  "name": "@cake-and-shape/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "echo \"API client generation will be added when the OpenAPI contract stabilizes.\"",
+    "build": "echo \"No generated client yet.\"",
+    "lint": "echo \"No generated client yet.\"",
+    "typecheck": "echo \"No generated client yet.\""
+  }
+}

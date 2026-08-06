@@ -1,0 +1,17 @@
+{
+  "name": "cake-and-shape",
+  "private": true,
+  "workspaces": [
+    "apps/public",
+    "apps/admin",
+    "packages/api-client"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:public": "npm --workspace apps/public run dev",
+    "dev:admin": "npm --workspace apps/admin run dev",
+    "build": "npm --workspaces --if-present run build",
+    "lint": "npm --workspaces --if-present run lint",
+    "typecheck": "npm --workspaces --if-present run typecheck"
+  }
+}
