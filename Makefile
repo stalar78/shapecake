@@ -1,4 +1,4 @@
-.PHONY: install dev up down migrate migration create-admin test test-migrations lint typecheck build
+.PHONY: install dev up down migrate migration create-admin test test-migrations test-docker test-migrations-docker lint typecheck build
 
 install:
 	npm install
@@ -27,6 +27,12 @@ test:
 
 test-migrations:
 	cd apps/api && pytest tests/test_migrations.py
+
+test-docker:
+	docker compose run --rm api-test
+
+test-migrations-docker:
+	docker compose run --rm api-test pytest tests/test_migrations.py
 
 lint:
 	npm run lint --workspaces --if-present

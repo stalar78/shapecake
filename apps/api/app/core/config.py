@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,13 +20,30 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     session_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     session_cookie_domain: str | None = None
-    allowed_frontend_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"])
+    allowed_frontend_origins: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"]
+    )
 
     @field_validator("allowed_frontend_origins", mode="before")
     @classmethod
     def parse_origins(cls, value: str | list[str]) -> list[str]:
         if isinstance(value, str):
-            return [origin.strip() for origin in value.split(",") if origin.strip()]
+            stripped = value.strip()
+            if not stripped:
+                return []
+            if stripped.startswith("["):
+                try:
+                    decoded = json.loads(stripped)
+                except json.JSONDecodeError as exc:
+                    raise ValueError("ALLOWED_FRONTEND_ORIGINS must be comma-separated or a JSON array") from exc
+                if not isinstance(decoded, list) or not all(
+                    isinstance(origin, str) for origin in decoded
+                ):
+                    raise ValueError("ALLOWED_FRONTEND_ORIGINS JSON value must be an array of strings")
+                return [origin.strip() for origin in decoded if origin.strip()]
+            return [origin.strip() for origin in stripped.split(",") if origin.strip()]
+        if not isinstance(value, list) or not all(isinstance(origin, str) for origin in value):
+            raise ValueError("ALLOWED_FRONTEND_ORIGINS must be comma-separated or a list of strings")
         return value
 
     @model_validator(mode="after")

@@ -5,7 +5,10 @@ COPY package.json package-lock.json ./
 COPY apps/admin/package.json apps/admin/package.json
 COPY apps/public/package.json apps/public/package.json
 COPY packages/api-client/package.json packages/api-client/package.json
-RUN npm ci --workspace apps/admin
+RUN npm config set fetch-retries 3 \
+    && npm config set fetch-retry-mintimeout 10000 \
+    && npm config set fetch-retry-maxtimeout 60000 \
+    && npm ci --workspace apps/admin
 COPY apps/admin apps/admin
 
 EXPOSE 5173
