@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 — architecture foundation and repository scaffold.
+Stage 01 foundation is accepted and committed. Local PostgreSQL, migration, Docker, and browser smoke verification remains pending. The next implementation stage is Stage 02: catalog domain and admin CRUD.
 
 ## Approved MVP
 
@@ -20,6 +20,19 @@ Stage 01 — architecture foundation and repository scaffold.
 - Docker Compose deployment foundation.
 
 Online payments, customer accounts, delivery integrations, warehouse accounting, loyalty features and a full CRM are outside the MVP.
+
+## Stage 01 foundation
+
+- npm-workspace monorepo;
+- Next.js public shell;
+- Vite/React admin shell;
+- FastAPI modular monolith;
+- async SQLAlchemy and Alembic;
+- PostgreSQL-backed opaque sessions;
+- HttpOnly cookies and CSRF protection;
+- singleton site settings;
+- guarded PostgreSQL integration and migration tests;
+- Docker Compose and Makefile interfaces.
 
 ## Working model
 
