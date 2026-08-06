@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation is fully accepted, runtime-verified, and committed. The next implementation stage is Stage 02: catalog domain and admin CRUD.
+Stage 01 foundation and Stage 02 catalog domain are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 03: customer inquiry workflow and administration handling.
 
 ## Approved MVP
 
@@ -36,6 +36,19 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - explicit opt-in for destructive test schema reset;
 - Docker Compose and Makefile interfaces;
 - successful live health, readiness, site-settings, migration, administrator creation, and full test-suite checks.
+
+## Stage 02 catalog domain
+
+- categories with visibility, ordering and archive rules;
+- desserts with publication, availability, fixed MVP flags and stable slugs;
+- ordered weight and price variants using integer minor currency units;
+- ordered dessert images with one active primary image;
+- safe local media storage with server-generated keys and signature validation;
+- public category, catalog and dessert-detail APIs;
+- authenticated and CSRF-protected catalog administration;
+- typed shared API client;
+- functional public catalog/detail pages and minimal admin catalog workflows;
+- PostgreSQL migration, integration, media-security and runtime verification.
 
 ## Working model
 
