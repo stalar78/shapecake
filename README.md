@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation is accepted and committed. Local PostgreSQL, migration, Docker, and browser smoke verification remains pending. The next implementation stage is Stage 02: catalog domain and admin CRUD.
+Stage 01 foundation is fully accepted, runtime-verified, and committed. The next implementation stage is Stage 02: catalog domain and admin CRUD.
 
 ## Approved MVP
 
@@ -32,7 +32,10 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - HttpOnly cookies and CSRF protection;
 - singleton site settings;
 - guarded PostgreSQL integration and migration tests;
-- Docker Compose and Makefile interfaces.
+- separate production and test API images;
+- explicit opt-in for destructive test schema reset;
+- Docker Compose and Makefile interfaces;
+- successful live health, readiness, site-settings, migration, administrator creation, and full test-suite checks.
 
 ## Working model
 
