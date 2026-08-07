@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, and Stage 04 reviews/promotions are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 05: site content, settings, and operational overview.
+Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, and Stage 05 site content/settings/operational overview are fully accepted and committed. The next implementation stage is Stage 06: order-request contract completion.
 
 ## Approved MVP
 
@@ -12,7 +12,7 @@ Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow
 - dynamic dessert catalog and detail pages;
 - custom administration application;
 - dessert, category, price variant, review, promotion and site-settings management;
-- customer inquiry workflow with status handling;
+- customer inquiry/order-request workflow with status handling;
 - secure media uploads;
 - PostgreSQL-backed FastAPI API;
 - Next.js public frontend;
@@ -72,6 +72,17 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - authenticated and CSRF-protected review/promotion administration;
 - shared typed API client plus functional public/admin interfaces;
 - Stage 04 PostgreSQL migration, comprehensive integration tests, production Docker builds and live runtime verification.
+
+## Stage 05 site content and operational overview
+
+- singleton site settings extended only with focused about-master content;
+- public business content for hero, contacts, ordering, delivery, pickup, prepayment, working hours and about-master is database-backed;
+- optional contact email and social/messenger URLs have controlled API-boundary validation;
+- authenticated, CSRF-protected site-settings administration is exposed in the existing admin app;
+- compact authenticated operational overview uses SQL counts and bounded recent-query lists;
+- overview exposes published/draft dessert counts, new inquiry count, recent inquiries and currently active promotions without unnecessary customer PII;
+- typed API client remains the integration boundary for both frontends;
+- Stage 05 migration and PostgreSQL regression coverage are accepted.
 
 ## Working model
 
