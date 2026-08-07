@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.overview import AdminOverviewResponse, get_admin_overview
 from app.auth.models import AdminSession, AdminUser
 from app.auth.passwords import verify_password
 from app.auth.rate_limit import login_rate_limiter
@@ -104,6 +105,14 @@ async def csrf(
     return CsrfResponse(
         csrf_token=make_csrf_token(session.csrf_secret, token, settings.session_hash_pepper)
     )
+
+
+@router.get("/admin/overview", response_model=AdminOverviewResponse)
+async def admin_overview(
+    db: AsyncSession = Depends(get_db_session),
+    _user: AdminUser = Depends(get_current_admin),
+) -> AdminOverviewResponse:
+    return await get_admin_overview(db)
 
 
 @router.get("/admin/site-settings", response_model=SiteSettingsResponse)

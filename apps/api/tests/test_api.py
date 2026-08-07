@@ -115,10 +115,127 @@ async def test_site_settings_patch_rejects_explicit_null(
     assert response.status_code == 422
 
 
+async def test_site_settings_stage_05_fields_trim_persist_and_public_payload_is_safe(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    await create_admin(db_session)
+    assert (await client.get("/api/admin/site-settings")).status_code == 401
+    await _login(client)
+    missing_csrf = await client.patch(
+        "/api/admin/site-settings",
+        json={"about_master_title": "Master"},
+    )
+    assert missing_csrf.status_code == 403
+
+    csrf = await _csrf(client)
+    updated = await client.patch(
+        "/api/admin/site-settings",
+        json={
+            "hero_title": "  Custom cakes  ",
+            "about_master_title": "  Meet the baker  ",
+            "about_master_text": "  Small-batch desserts  ",
+            "delivery_text": "  Delivery by agreement  ",
+        },
+        headers={"x-csrf-token": csrf},
+    )
+    assert updated.status_code == 200
+    body = updated.json()
+    assert body["hero_title"] == "Custom cakes"
+    assert body["about_master_title"] == "Meet the baker"
+    assert body["about_master_text"] == "Small-batch desserts"
+    assert body["delivery_text"] == "Delivery by agreement"
+
+    persisted = await client.get("/api/admin/site-settings")
+    assert persisted.status_code == 200
+    assert persisted.json()["about_master_title"] == "Meet the baker"
+
+    public = await client.get("/api/public/site-settings")
+    assert public.status_code == 200
+    public_body = public.json()
+    assert public_body["about_master_text"] == "Small-batch desserts"
+    assert "created_at" not in public_body
+    assert "updated_at" not in public_body
+    assert "id" not in public_body
+
+    blank_required = await client.patch(
+        "/api/admin/site-settings",
+        json={"hero_title": "   "},
+        headers={"x-csrf-token": csrf},
+    )
+    assert blank_required.status_code == 422
+    null_field = await client.patch(
+        "/api/admin/site-settings",
+        json={"about_master_text": None},
+        headers={"x-csrf-token": csrf},
+    )
+    assert null_field.status_code == 422
+
+
+async def test_site_settings_contact_validation(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    await create_admin(db_session)
+    await _login(client)
+    csrf = await _csrf(client)
+
+    empty_optional = await client.patch(
+        "/api/admin/site-settings",
+        json={"email": "  ", "whatsapp_url": "", "telegram_url": "  ", "social_url": ""},
+        headers={"x-csrf-token": csrf},
+    )
+    assert empty_optional.status_code == 200
+    assert empty_optional.json()["email"] == ""
+    assert empty_optional.json()["telegram_url"] == ""
+
+    valid = await client.patch(
+        "/api/admin/site-settings",
+        json={
+            "email": "  baker@example.com  ",
+            "whatsapp_url": "https://wa.me/15551234567",
+            "telegram_url": "https://t.me/cake_shape",
+            "social_url": "https://example.com/cake-shape",
+        },
+        headers={"x-csrf-token": csrf},
+    )
+    assert valid.status_code == 200
+    assert valid.json()["email"] == "baker@example.com"
+
+    malformed_email = await client.patch(
+        "/api/admin/site-settings",
+        json={"email": "not-an-email"},
+        headers={"x-csrf-token": csrf},
+    )
+    assert malformed_email.status_code == 422
+
+    for bad_url in [
+        "http://example.com",
+        "javascript:alert(1)",
+        "data:text/plain,hello",
+        "/relative/path",
+        "example.com/path",
+    ]:
+        response = await client.patch(
+            "/api/admin/site-settings",
+            json={"social_url": bad_url},
+            headers={"x-csrf-token": csrf},
+        )
+        assert response.status_code == 422, bad_url
+
+    patch_same_validation = await client.patch(
+        "/api/admin/site-settings",
+        json={"whatsapp_url": "ftp://example.com/contact"},
+        headers={"x-csrf-token": csrf},
+    )
+    assert patch_same_validation.status_code == 422
+
+
 async def test_public_site_settings_response(client: AsyncClient) -> None:
     response = await client.get("/api/public/site-settings")
     assert response.status_code == 200
     assert response.json()["hero_title"] == "Cake & Shape"
+    assert response.json()["about_master_title"] == "About the master"
 
 
 async def test_public_site_settings_missing_singleton_returns_configuration_error(
@@ -152,6 +269,8 @@ async def test_singleton_site_settings(db_session: AsyncSession) -> None:
                 id=2,
                 hero_title="x",
                 hero_text="x",
+                about_master_title="x",
+                about_master_text="x",
                 phone="",
                 email="",
                 whatsapp_url="",

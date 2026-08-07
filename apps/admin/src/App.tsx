@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   AdminApi,
+  type AdminOverview,
   type AdminCategory,
   type AdminDessert,
   type AdminPromotion,
@@ -9,6 +10,7 @@ import {
   type AdminInquiry,
   type InquiryStatus,
   type AdminUser,
+  type SiteSettings,
 } from '@cake-and-shape/api-client'
 import './index.css'
 
@@ -24,6 +26,8 @@ function App() {
   const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null)
   const [promotions, setPromotions] = useState<AdminPromotion[]>([])
   const [selectedPromotion, setSelectedPromotion] = useState<AdminPromotion | null>(null)
+  const [settings, setSettings] = useState<SiteSettings | null>(null)
+  const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [inquiries, setInquiries] = useState<AdminInquiry[]>([])
   const [inquiryTotal, setInquiryTotal] = useState(0)
   const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiry | null>(null)
@@ -83,9 +87,16 @@ function App() {
   }
 
   async function loadContent() {
-    const [nextReviews, nextPromotions] = await Promise.all([api.reviews(), api.promotions()])
+    const [nextReviews, nextPromotions, nextSettings, nextOverview] = await Promise.all([
+      api.reviews(),
+      api.promotions(),
+      api.siteSettings(),
+      api.overview(),
+    ])
     setReviews(nextReviews)
     setPromotions(nextPromotions)
+    setSettings(nextSettings)
+    setOverview(nextOverview)
     setSelectedReview((current) => nextReviews.find((review) => review.id === current?.id) ?? nextReviews[0] ?? null)
     setSelectedPromotion(
       (current) => nextPromotions.find((promotion) => promotion.id === current?.id) ?? nextPromotions[0] ?? null,
@@ -130,6 +141,8 @@ function App() {
     setSelectedReview(null)
     setPromotions([])
     setSelectedPromotion(null)
+    setSettings(null)
+    setOverview(null)
     setInquiries([])
     setSelectedInquiry(null)
   }
@@ -174,6 +187,8 @@ function App() {
       {message ? <p className={message.includes('failed') || message.includes('detail') ? 'error' : 'success'}>{message}</p> : null}
 
       <section className="admin-grid">
+        <OverviewPanel overview={overview} />
+        {settings ? <SettingsPanel settings={settings} run={run} /> : null}
         <CategoryPanel categories={categories} run={run} />
         <DessertPanel
           categories={categories.filter((category) => !category.archived_at)}
@@ -239,6 +254,99 @@ const transitionMap: Record<InquiryStatus, InquiryStatus[]> = {
   completed: [],
   cancelled: [],
   spam: [],
+}
+
+function OverviewPanel({ overview }: { overview: AdminOverview | null }) {
+  return (
+    <section className="card stack wide">
+      <div className="section-heading">
+        <div>
+          <h2>Operational overview</h2>
+          <p className="muted">Compact current state from catalog, inquiries, and promotions.</p>
+        </div>
+      </div>
+      {!overview ? <p className="muted">Loading overview...</p> : null}
+      {overview ? (
+        <>
+          <div className="details">
+            <div><dt>Published desserts</dt><dd>{overview.published_dessert_count}</dd></div>
+            <div><dt>Draft desserts</dt><dd>{overview.hidden_unpublished_dessert_count}</dd></div>
+            <div><dt>New inquiries</dt><dd>{overview.new_inquiry_count}</dd></div>
+            <div><dt>Active promotions</dt><dd>{overview.active_promotion_count}</dd></div>
+          </div>
+          <div className="inline-form">
+            <div className="note-box">
+              <strong>Recent inquiries</strong>
+              {overview.recent_inquiries.length === 0 ? <p className="muted">No recent inquiries.</p> : null}
+              {overview.recent_inquiries.map((inquiry) => (
+                <p key={inquiry.id}>
+                  #{inquiry.public_reference} · {inquiry.status.replaceAll('_', ' ')} · {formatDateTime(inquiry.created_at)}
+                </p>
+              ))}
+            </div>
+            <div className="note-box">
+              <strong>Active promotions</strong>
+              {overview.active_promotions.length === 0 ? <p className="muted">No active promotions.</p> : null}
+              {overview.active_promotions.map((promotion) => (
+                <p key={promotion.id}>
+                  {promotion.title} <span className="muted">/{promotion.slug}</span>
+                </p>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
+    </section>
+  )
+}
+
+function SettingsPanel({
+  settings,
+  run,
+}: {
+  settings: SiteSettings
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="card stack wide">
+      <div>
+        <h2>Site settings</h2>
+        <p className="muted">Global public business content shown on the storefront.</p>
+      </div>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(
+            () => api.updateSiteSettings(siteSettingsPayload(form)).then(() => undefined),
+            'Site settings updated.',
+          )
+        }}
+      >
+        <div className="inline-form">
+          <input name="hero_title" defaultValue={settings.hero_title} placeholder="Hero title" required />
+          <input name="phone" defaultValue={settings.phone} placeholder="Phone" />
+          <input name="email" defaultValue={settings.email} placeholder="Email" />
+        </div>
+        <textarea name="hero_text" defaultValue={settings.hero_text} placeholder="Hero text" />
+        <input name="about_master_title" defaultValue={settings.about_master_title} placeholder="About-master title" />
+        <textarea name="about_master_text" defaultValue={settings.about_master_text} placeholder="About-master text" />
+        <div className="inline-form">
+          <input name="whatsapp_url" defaultValue={settings.whatsapp_url} placeholder="WhatsApp URL" />
+          <input name="telegram_url" defaultValue={settings.telegram_url} placeholder="Telegram URL" />
+          <input name="social_url" defaultValue={settings.social_url} placeholder="Social URL" />
+        </div>
+        <textarea name="address_text" defaultValue={settings.address_text} placeholder="Address" />
+        <textarea name="working_hours_text" defaultValue={settings.working_hours_text} placeholder="Working hours" />
+        <textarea name="order_terms_text" defaultValue={settings.order_terms_text} placeholder="Order terms" />
+        <textarea name="delivery_text" defaultValue={settings.delivery_text} placeholder="Delivery" />
+        <textarea name="pickup_text" defaultValue={settings.pickup_text} placeholder="Pickup" />
+        <textarea name="prepayment_text" defaultValue={settings.prepayment_text} placeholder="Prepayment" />
+        <button type="submit">Save site settings</button>
+      </form>
+    </section>
+  )
 }
 
 function InquiryPanel({
@@ -1104,6 +1212,26 @@ function promotionPayload(form: FormData): Partial<AdminPromotion> {
     body: String(form.get('body') ?? ''),
     starts_at: startsAt,
     ends_at: endsAt,
+  }
+}
+
+function siteSettingsPayload(form: FormData): Partial<SiteSettings> {
+  return {
+    hero_title: String(form.get('hero_title') ?? ''),
+    hero_text: String(form.get('hero_text') ?? ''),
+    about_master_title: String(form.get('about_master_title') ?? ''),
+    about_master_text: String(form.get('about_master_text') ?? ''),
+    phone: String(form.get('phone') ?? ''),
+    email: String(form.get('email') ?? ''),
+    whatsapp_url: String(form.get('whatsapp_url') ?? ''),
+    telegram_url: String(form.get('telegram_url') ?? ''),
+    social_url: String(form.get('social_url') ?? ''),
+    address_text: String(form.get('address_text') ?? ''),
+    working_hours_text: String(form.get('working_hours_text') ?? ''),
+    order_terms_text: String(form.get('order_terms_text') ?? ''),
+    delivery_text: String(form.get('delivery_text') ?? ''),
+    pickup_text: String(form.get('pickup_text') ?? ''),
+    prepayment_text: String(form.get('prepayment_text') ?? ''),
   }
 }
 

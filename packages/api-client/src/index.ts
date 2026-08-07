@@ -74,6 +74,24 @@ export type PublicCatalog = {
   offset: number
 }
 
+export type SiteSettings = {
+  hero_title: string
+  hero_text: string
+  about_master_title: string
+  about_master_text: string
+  phone: string
+  email: string
+  whatsapp_url: string
+  telegram_url: string
+  social_url: string
+  address_text: string
+  delivery_text: string
+  pickup_text: string
+  prepayment_text: string
+  order_terms_text: string
+  working_hours_text: string
+}
+
 export type DessertReference = {
   id: number
   name: string
@@ -244,6 +262,32 @@ export type AdminInquiryFilters = {
   offset?: number
 }
 
+export type AdminOverviewInquiry = {
+  id: number
+  public_reference: string
+  status: InquiryStatus
+  dessert_name_snapshot: string | null
+  requested_date: string | null
+  created_at: string
+}
+
+export type AdminOverviewPromotion = {
+  id: number
+  slug: string
+  title: string
+  starts_at: string | null
+  ends_at: string | null
+}
+
+export type AdminOverview = {
+  published_dessert_count: number
+  hidden_unpublished_dessert_count: number
+  new_inquiry_count: number
+  recent_inquiries: AdminOverviewInquiry[]
+  active_promotion_count: number
+  active_promotions: AdminOverviewPromotion[]
+}
+
 export type ReorderItem = {
   id: number
   sort_order: number
@@ -284,6 +328,10 @@ function apiUrl(baseUrl: string, path: string): string {
 
 export async function getPublicCategories(baseUrl: string, fetcher: Fetcher = fetch): Promise<PublicCategory[]> {
   return parseJson(await fetcher(apiUrl(baseUrl, '/public/categories'), { cache: 'no-store' }))
+}
+
+export async function getPublicSiteSettings(baseUrl: string, fetcher: Fetcher = fetch): Promise<SiteSettings> {
+  return parseJson(await fetcher(apiUrl(baseUrl, '/public/site-settings'), { cache: 'no-store' }))
 }
 
 export async function getPublicCatalog(
@@ -404,6 +452,18 @@ export class AdminApi {
 
   categories(): Promise<AdminCategory[]> {
     return this.request('/admin/categories')
+  }
+
+  siteSettings(): Promise<SiteSettings> {
+    return this.request('/admin/site-settings')
+  }
+
+  updateSiteSettings(payload: Partial<SiteSettings>): Promise<SiteSettings> {
+    return this.mutate('/admin/site-settings', { method: 'PATCH', body: JSON.stringify(payload) })
+  }
+
+  overview(): Promise<AdminOverview> {
+    return this.request('/admin/overview')
   }
 
   inquiries(filters: AdminInquiryFilters = {}): Promise<AdminInquiryList> {

@@ -9,6 +9,8 @@ DEFAULT_SITE_SETTINGS = {
     "id": 1,
     "hero_title": "Cake & Shape",
     "hero_text": "Custom desserts for memorable moments.",
+    "about_master_title": "About the master",
+    "about_master_text": "",
     "phone": "",
     "email": "",
     "whatsapp_url": "",

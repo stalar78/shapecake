@@ -4,6 +4,7 @@ import {
   getPublicCategories,
   getPublicPromotions,
   getPublicReviews,
+  getPublicSiteSettings,
 } from "@cake-and-shape/api-client";
 import { InquiryForm } from "./InquiryForm";
 
@@ -15,7 +16,8 @@ export default async function Home({
   searchParams: Promise<{ category?: string }>;
 }) {
   const params = await searchParams;
-  const [categories, catalog, reviews, promotions] = await Promise.all([
+  const [settings, categories, catalog, reviews, promotions] = await Promise.all([
+    getPublicSiteSettings(apiBaseUrl).catch(() => null),
     getPublicCategories(apiBaseUrl).catch(() => []),
     getPublicCatalog(apiBaseUrl, { category: params.category }).catch(() => null),
     getPublicReviews(apiBaseUrl, { featured: true, limit: 3 }).catch(() => null),
@@ -26,14 +28,62 @@ export default async function Home({
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-10">
       <section className="rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-stone-500">
-          Cake & Shape Catalog
+          Cake & Shape
         </p>
         <h1 className="text-4xl font-semibold tracking-tight text-stone-950">
-          Desserts ready for real catalog data
+          {settings?.hero_title ?? "Cake & Shape"}
         </h1>
         <p className="mt-4 max-w-2xl text-lg leading-8 text-stone-700">
-          Browse published desserts, filter by visible category, and open a detail page by slug.
+          {settings?.hero_text ?? "Custom desserts for memorable moments."}
         </p>
+      </section>
+
+      <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-stone-950">
+            {settings?.about_master_title ?? "About the master"}
+          </h2>
+          <p className="mt-3 whitespace-pre-wrap text-stone-700">
+            {settings?.about_master_text || "Tell customers about the baker from the admin settings."}
+          </p>
+        </div>
+        <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-semibold text-stone-950">Contacts and hours</h2>
+          <dl className="mt-4 grid gap-3 text-sm text-stone-700">
+            <div>
+              <dt className="font-semibold text-stone-950">Phone</dt>
+              <dd>{settings?.phone || "Not set yet"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-950">Email</dt>
+              <dd>{settings?.email || "Not set yet"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-950">Address</dt>
+              <dd className="whitespace-pre-wrap">{settings?.address_text || "Not set yet"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-stone-950">Working hours</dt>
+              <dd className="whitespace-pre-wrap">{settings?.working_hours_text || "Not set yet"}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <section className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          ["How to order", settings?.order_terms_text],
+          ["Delivery", settings?.delivery_text],
+          ["Pickup", settings?.pickup_text],
+          ["Prepayment", settings?.prepayment_text],
+        ].map(([title, text]) => (
+          <article className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm" key={title}>
+            <h2 className="text-lg font-semibold text-stone-950">{title}</h2>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-700">
+              {text || "Not set yet"}
+            </p>
+          </article>
+        ))}
       </section>
 
       <nav className="flex flex-wrap gap-2" aria-label="Catalog categories">

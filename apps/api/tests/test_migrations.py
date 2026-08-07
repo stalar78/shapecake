@@ -73,6 +73,22 @@ async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
             singleton_count = await connection.scalar(
                 text("SELECT count(*) FROM site_settings WHERE id = 1")
             )
+            stage_05_columns = {
+                row[0]
+                for row in (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_schema = 'public'
+                              AND table_name = 'site_settings'
+                              AND column_name IN ('about_master_title', 'about_master_text')
+                            """
+                        )
+                    )
+                )
+            }
             constraints = {
                 row[0]
                 for row in (
@@ -101,7 +117,7 @@ async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
                     )
                 )
             }
-            return tables, constraints | indexes, int(singleton_count or 0)
+            return tables, constraints | indexes | stage_05_columns, int(singleton_count or 0)
     finally:
         await engine.dispose()
 
@@ -157,6 +173,8 @@ def run_migration_smoke_test() -> None:
         "ck_promotions_schedule_order",
         "ix_promotions_dessert_id",
         "ix_promotions_public_order",
+        "about_master_title",
+        "about_master_text",
     } <= constraints
     assert singleton_count == 1
 
@@ -188,5 +206,5 @@ def test_migration_smoke_wrapper_rejects_running_event_loop() -> None:
     asyncio.run(call_wrapper_inside_loop())
 
 
-def test_alembic_upgrade_head_creates_stage_04_schema() -> None:
+def test_alembic_upgrade_head_creates_stage_05_schema() -> None:
     run_migration_smoke_test()

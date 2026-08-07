@@ -13,6 +13,8 @@ class SiteSettings(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True, default=1)
     hero_title: Mapped[str] = mapped_column(String(200), nullable=False)
     hero_text: Mapped[str] = mapped_column(Text, nullable=False)
+    about_master_title: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")
+    about_master_text: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     phone: Mapped[str] = mapped_column(String(80), nullable=False)
     email: Mapped[str] = mapped_column(String(320), nullable=False)
     whatsapp_url: Mapped[str] = mapped_column(String(500), nullable=False)
