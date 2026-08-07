@@ -4,6 +4,8 @@ import {
   AdminApi,
   type AdminCategory,
   type AdminDessert,
+  type AdminPromotion,
+  type AdminReview,
   type AdminInquiry,
   type InquiryStatus,
   type AdminUser,
@@ -18,6 +20,10 @@ function App() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [desserts, setDesserts] = useState<AdminDessert[]>([])
   const [selectedDessert, setSelectedDessert] = useState<AdminDessert | null>(null)
+  const [reviews, setReviews] = useState<AdminReview[]>([])
+  const [selectedReview, setSelectedReview] = useState<AdminReview | null>(null)
+  const [promotions, setPromotions] = useState<AdminPromotion[]>([])
+  const [selectedPromotion, setSelectedPromotion] = useState<AdminPromotion | null>(null)
   const [inquiries, setInquiries] = useState<AdminInquiry[]>([])
   const [inquiryTotal, setInquiryTotal] = useState(0)
   const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiry | null>(null)
@@ -76,8 +82,18 @@ function App() {
     setSelectedInquiry((current) => next.items.find((inquiry) => inquiry.id === current?.id) ?? next.items[0] ?? null)
   }
 
+  async function loadContent() {
+    const [nextReviews, nextPromotions] = await Promise.all([api.reviews(), api.promotions()])
+    setReviews(nextReviews)
+    setPromotions(nextPromotions)
+    setSelectedReview((current) => nextReviews.find((review) => review.id === current?.id) ?? nextReviews[0] ?? null)
+    setSelectedPromotion(
+      (current) => nextPromotions.find((promotion) => promotion.id === current?.id) ?? nextPromotions[0] ?? null,
+    )
+  }
+
   async function loadWorkspace() {
-    await Promise.all([loadCatalog(), loadInquiries()])
+    await Promise.all([loadCatalog(), loadInquiries(), loadContent()])
   }
 
   async function run(action: () => Promise<void>, success: string) {
@@ -110,6 +126,10 @@ function App() {
     setCategories([])
     setDesserts([])
     setSelectedDessert(null)
+    setReviews([])
+    setSelectedReview(null)
+    setPromotions([])
+    setSelectedPromotion(null)
     setInquiries([])
     setSelectedInquiry(null)
   }
@@ -190,6 +210,20 @@ function App() {
             setInquiryOffset(nextOffset)
             void loadInquiries(inquiryStatusFilter, nextOffset, inquiryChannelFilter, inquirySearch)
           }}
+          run={run}
+        />
+        <ReviewPanel
+          desserts={desserts}
+          reviews={reviews}
+          selectedReview={selectedReview}
+          setSelectedReview={setSelectedReview}
+          run={run}
+        />
+        <PromotionPanel
+          desserts={desserts}
+          promotions={promotions}
+          selectedPromotion={selectedPromotion}
+          setSelectedPromotion={setSelectedPromotion}
           run={run}
         />
       </section>
@@ -345,6 +379,318 @@ function InquiryDetail({
           </p>
         ))}
       </div>
+    </section>
+  )
+}
+
+function ReviewPanel({
+  desserts,
+  reviews,
+  selectedReview,
+  setSelectedReview,
+  run,
+}: {
+  desserts: AdminDessert[]
+  reviews: AdminReview[]
+  selectedReview: AdminReview | null
+  setSelectedReview: (review: AdminReview | null) => void
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="card stack wide">
+      <div className="section-heading">
+        <div>
+          <h2>Reviews</h2>
+          <p className="muted">{reviews.length} active review records</p>
+        </div>
+      </div>
+      <form
+        className="inline-form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(
+            () =>
+              api.createReview({
+                dessert_id: nullableNumber(form.get('dessert_id')),
+                author_name: String(form.get('author_name') ?? ''),
+                rating: Number(form.get('rating')),
+                text: String(form.get('text') ?? ''),
+              }).then(() => undefined),
+            'Review created.',
+          )
+          event.currentTarget.reset()
+        }}
+      >
+        <input name="author_name" placeholder="Author name" required />
+        <input name="rating" type="number" min="1" max="5" defaultValue="5" required />
+        <select name="dessert_id">
+          <option value="">No dessert link</option>
+          {desserts.map((dessert) => (
+            <option key={dessert.id} value={dessert.id}>
+              {dessert.name}
+            </option>
+          ))}
+        </select>
+        <textarea name="text" placeholder="Review text" required />
+        <button type="submit">Create review</button>
+      </form>
+
+      {reviews.length === 0 ? <p className="muted">No reviews yet.</p> : null}
+      <div className="list">
+        {reviews.map((review) => (
+          <button className="row-button" type="button" key={review.id} onClick={() => setSelectedReview(review)}>
+            {review.author_name}
+            <span>
+              {review.rating}/5 · {review.is_published ? 'Published' : 'Draft'}
+              {review.is_featured ? ' · Featured' : ''}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="inline-form">
+        {reviews.map((review, index) => (
+          <div className="row-actions" key={review.id}>
+            <span>{review.author_name}</span>
+            <button
+              type="button"
+              className="secondary"
+              disabled={index === 0}
+              onClick={() => void run(() => api.reorderReviews(moveOrder(reviews, index, index - 1)).then(() => undefined), 'Reviews reordered.')}
+            >
+              Up
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={index === reviews.length - 1}
+              onClick={() => void run(() => api.reorderReviews(moveOrder(reviews, index, index + 1)).then(() => undefined), 'Reviews reordered.')}
+            >
+              Down
+            </button>
+          </div>
+        ))}
+      </div>
+      {selectedReview ? <ReviewEditor review={selectedReview} desserts={desserts} run={run} /> : null}
+    </section>
+  )
+}
+
+function ReviewEditor({
+  review,
+  desserts,
+  run,
+}: {
+  review: AdminReview
+  desserts: AdminDessert[]
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="editor stack">
+      <h3>Edit review from {review.author_name}</h3>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(
+            () =>
+              api.updateReview(review.id, {
+                dessert_id: nullableNumber(form.get('dessert_id')),
+                author_name: String(form.get('author_name') ?? ''),
+                rating: Number(form.get('rating')),
+                text: String(form.get('text') ?? ''),
+              }).then(() => undefined),
+            'Review updated.',
+          )
+        }}
+      >
+        <input name="author_name" defaultValue={review.author_name} required />
+        <input name="rating" type="number" min="1" max="5" defaultValue={review.rating} required />
+        <select name="dessert_id" defaultValue={review.dessert_id ?? ''}>
+          <option value="">No dessert link</option>
+          {desserts.map((dessert) => (
+            <option key={dessert.id} value={dessert.id}>
+              {dessert.name}
+            </option>
+          ))}
+        </select>
+        <textarea name="text" defaultValue={review.text} required />
+        <button type="submit">Save review</button>
+      </form>
+      <div className="inline-form">
+        <button type="button" className="secondary" onClick={() => void run(() => (review.is_published ? api.unpublishReview(review.id) : api.publishReview(review.id)).then(() => undefined), 'Review publication updated.')}>
+          {review.is_published ? 'Unpublish' : 'Publish'}
+        </button>
+        <button type="button" className="secondary" onClick={() => void run(() => (review.is_featured ? api.unfeatureReview(review.id) : api.featureReview(review.id)).then(() => undefined), 'Review featured state updated.')}>
+          {review.is_featured ? 'Remove featured' : 'Mark featured'}
+        </button>
+        <button type="button" className="secondary danger" onClick={() => void run(() => api.archiveReview(review.id).then(() => undefined), 'Review archived.')}>
+          Archive
+        </button>
+      </div>
+      <p className="muted">Linked dessert: {review.dessert?.name ?? 'None'}</p>
+      <p className="muted">Updated {formatDateTime(review.updated_at)}</p>
+    </section>
+  )
+}
+
+function PromotionPanel({
+  desserts,
+  promotions,
+  selectedPromotion,
+  setSelectedPromotion,
+  run,
+}: {
+  desserts: AdminDessert[]
+  promotions: AdminPromotion[]
+  selectedPromotion: AdminPromotion | null
+  setSelectedPromotion: (promotion: AdminPromotion | null) => void
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="card stack wide">
+      <div className="section-heading">
+        <div>
+          <h2>Promotions</h2>
+          <p className="muted">{promotions.length} active promotion records</p>
+        </div>
+      </div>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(
+            () =>
+              api.createPromotion(promotionPayload(form)).then(() => undefined),
+            'Promotion created.',
+          )
+          event.currentTarget.reset()
+        }}
+      >
+        <div className="inline-form">
+          <input name="title" placeholder="Promotion title" required />
+          <input name="slug" placeholder="promotion-slug" required />
+          <select name="dessert_id">
+            <option value="">No dessert link</option>
+            {desserts.map((dessert) => (
+              <option key={dessert.id} value={dessert.id}>
+                {dessert.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <textarea name="summary" placeholder="Short public summary" />
+        <textarea name="body" placeholder="Promotion details" />
+        <div className="inline-form">
+          <label>
+            Starts at
+            <input name="starts_at" type="datetime-local" />
+          </label>
+          <label>
+            Ends at
+            <input name="ends_at" type="datetime-local" />
+          </label>
+        </div>
+        <button type="submit">Create promotion</button>
+      </form>
+
+      {promotions.length === 0 ? <p className="muted">No promotions yet.</p> : null}
+      <div className="list">
+        {promotions.map((promotion) => (
+          <button className="row-button" type="button" key={promotion.id} onClick={() => setSelectedPromotion(promotion)}>
+            {promotion.title}
+            <span>{promotion.is_published ? 'Published' : 'Draft'}</span>
+          </button>
+        ))}
+      </div>
+      <div className="inline-form">
+        {promotions.map((promotion, index) => (
+          <div className="row-actions" key={promotion.id}>
+            <span>{promotion.title}</span>
+            <button
+              type="button"
+              className="secondary"
+              disabled={index === 0}
+              onClick={() => void run(() => api.reorderPromotions(moveOrder(promotions, index, index - 1)).then(() => undefined), 'Promotions reordered.')}
+            >
+              Up
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={index === promotions.length - 1}
+              onClick={() => void run(() => api.reorderPromotions(moveOrder(promotions, index, index + 1)).then(() => undefined), 'Promotions reordered.')}
+            >
+              Down
+            </button>
+          </div>
+        ))}
+      </div>
+      {selectedPromotion ? <PromotionEditor promotion={selectedPromotion} desserts={desserts} run={run} /> : null}
+    </section>
+  )
+}
+
+function PromotionEditor({
+  promotion,
+  desserts,
+  run,
+}: {
+  promotion: AdminPromotion
+  desserts: AdminDessert[]
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="editor stack">
+      <h3>Edit {promotion.title}</h3>
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(() => api.updatePromotion(promotion.id, promotionPayload(form)).then(() => undefined), 'Promotion updated.')
+        }}
+      >
+        <div className="inline-form">
+          <input name="title" defaultValue={promotion.title} required />
+          <input name="slug" defaultValue={promotion.slug} required />
+          <select name="dessert_id" defaultValue={promotion.dessert_id ?? ''}>
+            <option value="">No dessert link</option>
+            {desserts.map((dessert) => (
+              <option key={dessert.id} value={dessert.id}>
+                {dessert.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <textarea name="summary" defaultValue={promotion.summary} />
+        <textarea name="body" defaultValue={promotion.body} />
+        <div className="inline-form">
+          <label>
+            Starts at
+            <input name="starts_at" type="datetime-local" defaultValue={dateTimeLocalValue(promotion.starts_at)} />
+          </label>
+          <label>
+            Ends at
+            <input name="ends_at" type="datetime-local" defaultValue={dateTimeLocalValue(promotion.ends_at)} />
+          </label>
+        </div>
+        <button type="submit">Save promotion</button>
+      </form>
+      <div className="inline-form">
+        <button type="button" className="secondary" onClick={() => void run(() => (promotion.is_published ? api.unpublishPromotion(promotion.id) : api.publishPromotion(promotion.id)).then(() => undefined), 'Promotion publication updated.')}>
+          {promotion.is_published ? 'Unpublish' : 'Publish'}
+        </button>
+        <button type="button" className="secondary danger" onClick={() => void run(() => api.archivePromotion(promotion.id).then(() => undefined), 'Promotion archived.')}>
+          Archive
+        </button>
+      </div>
+      <p className="muted">Linked dessert: {promotion.dessert?.name ?? 'None'}</p>
+      <p className="muted">
+        Window: {promotion.starts_at ? formatDateTime(promotion.starts_at) : 'now'} to {promotion.ends_at ? formatDateTime(promotion.ends_at) : 'open-ended'}
+      </p>
     </section>
   )
 }
@@ -719,6 +1065,46 @@ function formatDateTime(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function nullableNumber(value: FormDataEntryValue | null) {
+  const text = String(value ?? '')
+  return text ? Number(text) : null
+}
+
+function dateTimeLocalValue(value: string | null) {
+  if (!value) {
+    return ''
+  }
+  const date = new Date(value)
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function dateTimePayload(value: FormDataEntryValue | null) {
+  const text = String(value ?? '')
+  if (!text) {
+    return null
+  }
+  return new Date(text).toISOString()
+}
+
+function promotionPayload(form: FormData): Partial<AdminPromotion> {
+  const startsAt = dateTimePayload(form.get('starts_at'))
+  const endsAt = dateTimePayload(form.get('ends_at'))
+  if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+    throw new Error('ends_at must be greater than starts_at')
+  }
+  return {
+    dessert_id: nullableNumber(form.get('dessert_id')),
+    title: String(form.get('title') ?? ''),
+    slug: String(form.get('slug') ?? ''),
+    summary: String(form.get('summary') ?? ''),
+    body: String(form.get('body') ?? ''),
+    starts_at: startsAt,
+    ends_at: endsAt,
+  }
 }
 
 function moveOrder(items: Array<{ id: number }>, from: number, to: number) {

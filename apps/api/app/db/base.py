@@ -21,4 +21,6 @@ from app.auth import models as _auth_models  # noqa: F401
 from app.categories import models as _category_models  # noqa: F401
 from app.desserts import models as _dessert_models  # noqa: F401
 from app.inquiries import models as _inquiry_models  # noqa: F401
+from app.promotions import models as _promotion_models  # noqa: F401
+from app.reviews import models as _review_models  # noqa: F401
 from app.site_settings import models as _site_settings_models  # noqa: F401

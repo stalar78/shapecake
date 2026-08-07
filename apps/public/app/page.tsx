@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getPublicCatalog, getPublicCategories } from "@cake-and-shape/api-client";
+import {
+  getPublicCatalog,
+  getPublicCategories,
+  getPublicPromotions,
+  getPublicReviews,
+} from "@cake-and-shape/api-client";
 import { InquiryForm } from "./InquiryForm";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
@@ -10,9 +15,11 @@ export default async function Home({
   searchParams: Promise<{ category?: string }>;
 }) {
   const params = await searchParams;
-  const [categories, catalog] = await Promise.all([
+  const [categories, catalog, reviews, promotions] = await Promise.all([
     getPublicCategories(apiBaseUrl).catch(() => []),
     getPublicCatalog(apiBaseUrl, { category: params.category }).catch(() => null),
+    getPublicReviews(apiBaseUrl, { featured: true, limit: 3 }).catch(() => null),
+    getPublicPromotions(apiBaseUrl, { limit: 3 }).catch(() => null),
   ]);
 
   return (
@@ -43,6 +50,49 @@ export default async function Home({
           </Link>
         ))}
       </nav>
+
+      <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+        <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-stone-950">Active promotions</h2>
+            <span className="text-sm font-semibold text-stone-500">{promotions?.total ?? 0} live</span>
+          </div>
+          {!promotions ? <p className="text-sm text-amber-800">Promotions are unavailable right now.</p> : null}
+          {promotions && promotions.items.length === 0 ? <p className="text-stone-600">No active promotions yet.</p> : null}
+          <div className="grid gap-3">
+            {promotions?.items.map((promotion) => (
+              <Link className="rounded-2xl bg-amber-50 p-4" href={`/promotions/${promotion.slug}`} key={promotion.id}>
+                <h3 className="font-semibold text-stone-950">{promotion.title}</h3>
+                <p className="mt-1 text-sm text-stone-700">{promotion.summary || "Open this promotion for details."}</p>
+                {promotion.dessert ? <p className="mt-2 text-xs font-semibold text-stone-500">Featured dessert: {promotion.dessert.name}</p> : null}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-2xl font-semibold text-stone-950">Guest reviews</h2>
+            <span className="text-sm font-semibold text-stone-500">{reviews?.total ?? 0} featured</span>
+          </div>
+          {!reviews ? <p className="text-sm text-amber-800">Reviews are unavailable right now.</p> : null}
+          {reviews && reviews.items.length === 0 ? <p className="text-stone-600">No featured reviews yet.</p> : null}
+          <div className="grid gap-3">
+            {reviews?.items.map((review) => (
+              <article className="rounded-2xl bg-stone-50 p-4" key={review.id}>
+                <p className="sr-only">{review.rating} out of 5 stars</p>
+                <p aria-hidden="true" className="font-semibold text-amber-700">
+                  {"★".repeat(review.rating)}
+                  {"☆".repeat(5 - review.rating)}
+                </p>
+                <blockquote className="mt-2 text-stone-700">“{review.text}”</blockquote>
+                <p className="mt-3 text-sm font-semibold text-stone-950">{review.author_name}</p>
+                {review.dessert ? <p className="text-xs text-stone-500">About {review.dessert.name}</p> : null}
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {!catalog ? (
         <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

@@ -32,11 +32,13 @@ def migration_test_environment(database_url: str) -> Iterator[Config]:
         get_settings.cache_clear()
 
 
-async def _clean_stage_01_tables(database_url: str) -> None:
+async def _clean_schema_tables(database_url: str) -> None:
     engine = create_async_engine(database_url)
     try:
         async with engine.begin() as connection:
             await connection.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS promotions CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS reviews CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS inquiry_status_history CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS inquiries CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS dessert_images CASCADE"))
@@ -50,7 +52,7 @@ async def _clean_stage_01_tables(database_url: str) -> None:
         await engine.dispose()
 
 
-async def _inspect_stage_01_schema(database_url: str) -> tuple[set[str], set[str], int]:
+async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
     engine = create_async_engine(database_url)
     try:
         async with engine.connect() as connection:
@@ -113,12 +115,12 @@ def run_migration_smoke_test() -> None:
         raise RuntimeError("migration smoke test must run outside an active asyncio event loop")
 
     database_url = guarded_test_database_url()
-    asyncio.run(_clean_stage_01_tables(database_url))
+    asyncio.run(_clean_schema_tables(database_url))
 
     with migration_test_environment(database_url) as config:
         command.upgrade(config, "head")
 
-    tables, constraints, singleton_count = asyncio.run(_inspect_stage_01_schema(database_url))
+    tables, constraints, singleton_count = asyncio.run(_inspect_schema(database_url))
     assert {
         "admin_users",
         "admin_sessions",
@@ -129,6 +131,8 @@ def run_migration_smoke_test() -> None:
         "dessert_images",
         "inquiries",
         "inquiry_status_history",
+        "reviews",
+        "promotions",
         "alembic_version",
     } <= tables
     assert {
@@ -145,6 +149,14 @@ def run_migration_smoke_test() -> None:
         "ix_inquiries_created_at",
         "ix_inquiries_requested_date",
         "ix_inquiry_status_history_inquiry_id",
+        "ck_reviews_rating_range",
+        "ix_reviews_dessert_id",
+        "ix_reviews_featured",
+        "ix_reviews_public_order",
+        "uq_promotions_slug",
+        "ck_promotions_schedule_order",
+        "ix_promotions_dessert_id",
+        "ix_promotions_public_order",
     } <= constraints
     assert singleton_count == 1
 
@@ -176,5 +188,5 @@ def test_migration_smoke_wrapper_rejects_running_event_loop() -> None:
     asyncio.run(call_wrapper_inside_loop())
 
 
-def test_alembic_upgrade_head_creates_stage_01_schema() -> None:
+def test_alembic_upgrade_head_creates_stage_04_schema() -> None:
     run_migration_smoke_test()

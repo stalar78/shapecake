@@ -74,6 +74,48 @@ export type PublicCatalog = {
   offset: number
 }
 
+export type DessertReference = {
+  id: number
+  name: string
+  slug: string
+}
+
+export type PublicReview = {
+  id: number
+  dessert_id: number | null
+  dessert: DessertReference | null
+  author_name: string
+  rating: number
+  text: string
+  is_featured: boolean
+}
+
+export type PublicReviewList = {
+  items: PublicReview[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export type PublicPromotion = {
+  id: number
+  dessert_id: number | null
+  dessert: DessertReference | null
+  slug: string
+  title: string
+  summary: string
+  body: string
+  starts_at: string | null
+  ends_at: string | null
+}
+
+export type PublicPromotionList = {
+  items: PublicPromotion[]
+  total: number
+  limit: number
+  offset: number
+}
+
 export type AdminCategory = PublicCategory & {
   sort_order: number
   is_visible: boolean
@@ -86,6 +128,38 @@ export type AdminDessert = PublicDessertDetail & {
   category_id: number
   is_published: boolean
   sort_order: number
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+}
+
+export type AdminReview = {
+  id: number
+  dessert_id: number | null
+  dessert: DessertReference | null
+  author_name: string
+  rating: number
+  text: string
+  is_published: boolean
+  is_featured: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+  archived_at: string | null
+}
+
+export type AdminPromotion = {
+  id: number
+  dessert_id: number | null
+  dessert: DessertReference | null
+  slug: string
+  title: string
+  summary: string
+  body: string
+  is_published: boolean
+  sort_order: number
+  starts_at: string | null
+  ends_at: string | null
   created_at: string
   updated_at: string
   archived_at: string | null
@@ -233,6 +307,42 @@ export async function getPublicDessert(
   return parseJson(await fetcher(apiUrl(baseUrl, `/public/desserts/${encodeURIComponent(slug)}`), { cache: 'no-store' }))
 }
 
+export async function getPublicReviews(
+  baseUrl: string,
+  params: { dessert_id?: number; featured?: boolean; limit?: number; offset?: number } = {},
+  fetcher: Fetcher = fetch,
+): Promise<PublicReviewList> {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      search.set(key, String(value))
+    }
+  }
+  return parseJson(await fetcher(apiUrl(baseUrl, `/public/reviews${search.size ? `?${search.toString()}` : ''}`), { cache: 'no-store' }))
+}
+
+export async function getPublicPromotions(
+  baseUrl: string,
+  params: { limit?: number; offset?: number } = {},
+  fetcher: Fetcher = fetch,
+): Promise<PublicPromotionList> {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null) {
+      search.set(key, String(value))
+    }
+  }
+  return parseJson(await fetcher(apiUrl(baseUrl, `/public/promotions${search.size ? `?${search.toString()}` : ''}`), { cache: 'no-store' }))
+}
+
+export async function getPublicPromotion(
+  baseUrl: string,
+  slug: string,
+  fetcher: Fetcher = fetch,
+): Promise<PublicPromotion> {
+  return parseJson(await fetcher(apiUrl(baseUrl, `/public/promotions/${encodeURIComponent(slug)}`), { cache: 'no-store' }))
+}
+
 export async function submitPublicInquiry(
   baseUrl: string,
   payload: PublicInquiryInput,
@@ -338,6 +448,78 @@ export class AdminApi {
 
   desserts(): Promise<AdminDessert[]> {
     return this.request('/admin/desserts')
+  }
+
+  reviews(includeArchived = false): Promise<AdminReview[]> {
+    return this.request(`/admin/reviews${includeArchived ? '?include_archived=true' : ''}`)
+  }
+
+  review(id: number): Promise<AdminReview> {
+    return this.request(`/admin/reviews/${id}`)
+  }
+
+  createReview(payload: Partial<AdminReview>): Promise<AdminReview> {
+    return this.mutate('/admin/reviews', { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  updateReview(id: number, payload: Partial<AdminReview>): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  }
+
+  publishReview(id: number): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}/publish`, { method: 'POST' })
+  }
+
+  unpublishReview(id: number): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}/unpublish`, { method: 'POST' })
+  }
+
+  featureReview(id: number): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}/feature`, { method: 'POST' })
+  }
+
+  unfeatureReview(id: number): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}/unfeature`, { method: 'POST' })
+  }
+
+  reorderReviews(payload: ReorderItem[]): Promise<AdminReview[]> {
+    return this.mutate('/admin/reviews/reorder', { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  archiveReview(id: number): Promise<AdminReview> {
+    return this.mutate(`/admin/reviews/${id}/archive`, { method: 'POST' })
+  }
+
+  promotions(includeArchived = false): Promise<AdminPromotion[]> {
+    return this.request(`/admin/promotions${includeArchived ? '?include_archived=true' : ''}`)
+  }
+
+  promotion(id: number): Promise<AdminPromotion> {
+    return this.request(`/admin/promotions/${id}`)
+  }
+
+  createPromotion(payload: Partial<AdminPromotion>): Promise<AdminPromotion> {
+    return this.mutate('/admin/promotions', { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  updatePromotion(id: number, payload: Partial<AdminPromotion>): Promise<AdminPromotion> {
+    return this.mutate(`/admin/promotions/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+  }
+
+  publishPromotion(id: number): Promise<AdminPromotion> {
+    return this.mutate(`/admin/promotions/${id}/publish`, { method: 'POST' })
+  }
+
+  unpublishPromotion(id: number): Promise<AdminPromotion> {
+    return this.mutate(`/admin/promotions/${id}/unpublish`, { method: 'POST' })
+  }
+
+  reorderPromotions(payload: ReorderItem[]): Promise<AdminPromotion[]> {
+    return this.mutate('/admin/promotions/reorder', { method: 'POST', body: JSON.stringify(payload) })
+  }
+
+  archivePromotion(id: number): Promise<AdminPromotion> {
+    return this.mutate(`/admin/promotions/${id}/archive`, { method: 'POST' })
   }
 
   createDessert(payload: Partial<AdminDessert>): Promise<AdminDessert> {
