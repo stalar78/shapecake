@@ -1,8 +1,31 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicPromotion } from "@cake-and-shape/api-client";
+import { promotionDescription, siteUrl } from "../../seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const promotion = await getPublicPromotion(apiBaseUrl, slug).catch(() => null);
+  if (!promotion) {
+    return {};
+  }
+  const description = promotionDescription(promotion);
+  return {
+    title: promotion.title,
+    description,
+    alternates: {
+      canonical: `/promotions/${promotion.slug}`,
+    },
+    openGraph: {
+      title: promotion.title,
+      description,
+      url: siteUrl(`/promotions/${promotion.slug}`),
+    },
+  };
+}
 
 export default async function PromotionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

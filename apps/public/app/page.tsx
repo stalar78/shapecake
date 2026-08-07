@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   getPublicCatalog,
   getPublicCategories,
@@ -7,8 +8,32 @@ import {
   getPublicSiteSettings,
 } from "@cake-and-shape/api-client";
 import { InquiryForm } from "./InquiryForm";
+import { businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const settings = await getPublicSiteSettings(apiBaseUrl).catch(() => null);
+  const title = params.category ? `Catalog: ${params.category}` : siteName;
+  const description = settings?.hero_text || defaultDescription;
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: params.category ? `/?category=${encodeURIComponent(params.category)}` : "/",
+    },
+    openGraph: {
+      title,
+      description,
+      url: siteUrl(params.category ? `/?category=${encodeURIComponent(params.category)}` : "/"),
+    },
+  };
+}
 
 export default async function Home({
   searchParams,
@@ -26,6 +51,10 @@ export default async function Home({
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-6 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={jsonLd(businessJsonLd(settings))}
+      />
       <section className="rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
         <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-stone-500">
           Cake & Shape

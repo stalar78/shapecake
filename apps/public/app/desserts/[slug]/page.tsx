@@ -1,9 +1,43 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicDessert, getPublicReviews } from "@cake-and-shape/api-client";
 import { InquiryForm } from "../../InquiryForm";
+import { absoluteMediaUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const dessert = await getPublicDessert(apiBaseUrl, slug).catch(() => null);
+  if (!dessert) {
+    return {};
+  }
+  if (!dessert.is_available) {
+    return {
+      title: dessert.name,
+      robots: {
+        index: false,
+        follow: true,
+      },
+    };
+  }
+  const description = dessertDescription(dessert);
+  const image = absoluteMediaUrl(dessert.primary_image?.url ?? dessert.images[0]?.url);
+  return {
+    title: dessert.name,
+    description,
+    alternates: {
+      canonical: `/desserts/${dessert.slug}`,
+    },
+    openGraph: {
+      title: dessert.name,
+      description,
+      url: siteUrl(`/desserts/${dessert.slug}`),
+      images: image ? [{ url: image, alt: dessert.primary_image?.alt_text || dessert.name }] : undefined,
+    },
+  };
+}
 
 export default async function DessertPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -15,6 +49,9 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="mx-auto grid min-h-screen w-full max-w-5xl gap-8 px-6 py-10 lg:grid-cols-[1fr_0.9fr]">
+      {dessert.is_available ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(dessertJsonLd(dessert))} />
+      ) : null}
       <section className="space-y-4">
         <Link className="text-sm font-semibold text-stone-600" href="/">
           Back to catalog
