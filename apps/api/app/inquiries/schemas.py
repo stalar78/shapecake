@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 from app.inquiries.status import InquiryStatus
 
 PreferredContactChannel = Literal["phone", "email", "whatsapp", "telegram"]
+FulfillmentMethod = Literal["pickup", "delivery"]
 
 PHONE_PATTERN = re.compile(r"^[0-9+().\-\s]{7,32}$")
 
@@ -46,8 +47,12 @@ class PublicInquiryCreate(BaseModel):
     email: EmailStr | None = None
     preferred_contact_channel: PreferredContactChannel
     dessert_id: int | None = Field(default=None, ge=1)
+    variant_id: int | None = Field(default=None, ge=1)
+    fulfillment_method: FulfillmentMethod = "pickup"
     requested_date: date | None = None
     quantity: int | None = Field(default=None, ge=1, le=10000)
+    recipe_preferences: str = Field(default="", max_length=2000)
+    decor_preferences: str = Field(default="", max_length=2000)
     message: str = Field(min_length=1, max_length=5000)
     consent_personal_data: bool
 
@@ -55,6 +60,11 @@ class PublicInquiryCreate(BaseModel):
     @classmethod
     def trim_required_text(cls, value: object) -> object:
         return _required(value) if isinstance(value, str) else value
+
+    @field_validator("recipe_preferences", "decor_preferences", mode="before")
+    @classmethod
+    def trim_optional_text(cls, value: object) -> object:
+        return _trim(value) if isinstance(value, str) else value
 
     @field_validator("phone", mode="before")
     @classmethod
@@ -112,6 +122,10 @@ class AdminInquiryResponse(BaseModel):
     public_reference: str
     dessert_id: int | None
     dessert_name_snapshot: str | None
+    variant_id: int | None
+    variant_weight_value_snapshot: str | None
+    variant_weight_unit_snapshot: str | None
+    fulfillment_method: FulfillmentMethod
     dessert: InquiryDessertReference | None
     customer_name: str
     phone: str | None
@@ -119,6 +133,8 @@ class AdminInquiryResponse(BaseModel):
     preferred_contact_channel: PreferredContactChannel
     requested_date: date | None
     quantity: int | None
+    recipe_preferences: str
+    decor_preferences: str
     message: str
     consent_personal_data: bool
     status: InquiryStatus

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Any
 
 import pytest
@@ -48,6 +49,7 @@ async def _public_dessert(
     slug: str = "honey-cake",
     *,
     published: bool = True,
+    available: bool = True,
     category_visible: bool = True,
     category_archived: bool = False,
 ) -> Dessert:
@@ -57,13 +59,25 @@ async def _public_dessert(
         category.archived_at = datetime.now(UTC)
     db.add(category)
     await db.commit()
-    dessert = Dessert(category_id=category.id, name="Honey Cake", slug=slug, is_published=published)
+    dessert = Dessert(
+        category_id=category.id,
+        name="Honey Cake",
+        slug=slug,
+        is_published=published,
+        is_available=available,
+    )
     db.add(dessert)
     await db.commit()
     db.add(DessertVariant(dessert_id=dessert.id, weight_value=1, weight_unit="kg", price=2500))
     await db.commit()
     await db.refresh(dessert)
     return dessert
+
+
+async def _variant(db: AsyncSession, dessert: Dessert) -> DessertVariant:
+    variant = await db.scalar(select(DessertVariant).where(DessertVariant.dessert_id == dessert.id))
+    assert variant is not None
+    return variant
 
 
 def _payload(**overrides: Any) -> dict[str, Any]:
@@ -94,6 +108,158 @@ async def _latest_inquiry_id(db: AsyncSession, public_reference: str) -> int:
     )
     assert inquiry_id is not None
     return inquiry_id
+
+
+async def test_public_submission_accepts_active_same_dessert_variant_and_snapshots_admin_detail(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    dessert = await _public_dessert(db_session)
+    variant = await _variant(db_session, dessert)
+    response = await client.post(
+        "/api/public/inquiries",
+        json=_payload(
+            dessert_id=dessert.id,
+            variant_id=variant.id,
+            fulfillment_method="delivery",
+            recipe_preferences="  less sugar, vanilla sponge  ",
+            decor_preferences="  blue flowers  ",
+            variant_weight_value_snapshot="client-forged",
+            variant_weight_unit_snapshot="pcs",
+        ),
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert set(body) == {"acknowledgement", "public_reference", "created_at"}
+
+    inquiry_id = await _latest_inquiry_id(db_session, body["public_reference"])
+    stored = await db_session.get(Inquiry, inquiry_id)
+    assert stored is not None
+    assert stored.variant_id == variant.id
+    assert stored.variant_weight_value_snapshot == str(variant.weight_value)
+    assert stored.variant_weight_unit_snapshot == variant.weight_unit
+    assert stored.fulfillment_method == "delivery"
+    assert stored.recipe_preferences == "less sugar, vanilla sponge"
+    assert stored.decor_preferences == "blue flowers"
+
+    csrf = await _login(client, db_session)
+    detail = await client.get(f"/api/admin/inquiries/{inquiry_id}", headers={"x-csrf-token": csrf})
+    assert detail.status_code == 200
+    detail_body = detail.json()
+    assert detail_body["variant_id"] == variant.id
+    assert detail_body["variant_weight_value_snapshot"] == str(variant.weight_value)
+    assert detail_body["variant_weight_unit_snapshot"] == variant.weight_unit
+    assert detail_body["fulfillment_method"] == "delivery"
+    assert detail_body["recipe_preferences"] == "less sugar, vanilla sponge"
+    assert detail_body["decor_preferences"] == "blue flowers"
+
+
+async def test_public_submission_rejects_unknown_cross_dessert_and_unavailable_variants(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    dessert = await _public_dessert(db_session, "variant-cake")
+    other = await _public_dessert(db_session, "other-variant-cake")
+    other_variant = await _variant(db_session, other)
+
+    unknown = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=999999),
+    )
+    assert unknown.status_code == 404
+
+    cross_dessert = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=other_variant.id, message="cross dessert"),
+    )
+    assert cross_dessert.status_code == 422
+
+    inactive = DessertVariant(
+        dessert_id=dessert.id,
+        weight_value=Decimal("2.00"),
+        weight_unit="kg",
+        price=5000,
+        is_available=False,
+    )
+    db_session.add(inactive)
+    await db_session.commit()
+    unavailable = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=inactive.id, message="inactive"),
+    )
+    assert unavailable.status_code == 422
+
+    archived = DessertVariant(
+        dessert_id=dessert.id,
+        weight_value=Decimal("3.00"),
+        weight_unit="kg",
+        price=7000,
+        archived_at=datetime.now(UTC),
+    )
+    db_session.add(archived)
+    await db_session.commit()
+    archived_response = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=archived.id, message="archived variant"),
+    )
+    assert archived_response.status_code == 422
+
+    without_dessert = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=None, variant_id=other_variant.id, message="no dessert"),
+    )
+    assert without_dessert.status_code == 422
+
+
+async def test_order_request_field_validation_and_duplicate_distinction(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    dessert = await _public_dessert(db_session)
+    variant = await _variant(db_session, dessert)
+    second_variant = DessertVariant(
+        dessert_id=dessert.id,
+        weight_value=Decimal("2.00"),
+        weight_unit="kg",
+        price=5000,
+    )
+    db_session.add(second_variant)
+    await db_session.commit()
+
+    invalid_fulfillment = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=variant.id, fulfillment_method="courier"),
+    )
+    assert invalid_fulfillment.status_code == 422
+
+    too_long_preference = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, recipe_preferences="x" * 2001),
+    )
+    assert too_long_preference.status_code == 422
+
+    first = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=variant.id, fulfillment_method="pickup"),
+    )
+    assert first.status_code == 201
+    duplicate = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=variant.id, fulfillment_method="pickup"),
+    )
+    assert duplicate.status_code == 409
+
+    different_variant = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=second_variant.id, fulfillment_method="pickup"),
+    )
+    assert different_variant.status_code == 201
+
+    different_fulfillment = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=dessert.id, variant_id=variant.id, fulfillment_method="delivery"),
+    )
+    assert different_fulfillment.status_code == 201
 
 
 async def test_valid_public_submission_acknowledgement_and_notification(
@@ -145,6 +311,20 @@ async def test_public_dessert_reference_must_be_public_and_active(
     public = await _public_dessert(db_session)
     linked = await _create_inquiry(client, dessert_id=public.id)
     assert linked["public_reference"]
+
+    unavailable = await _public_dessert(db_session, "unavailable-cake", available=False)
+    response = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=unavailable.id, message="unavailable"),
+    )
+    assert response.status_code == 404
+
+    available = await _public_dessert(db_session, "available-cake", available=True)
+    response = await client.post(
+        "/api/public/inquiries",
+        json=_payload(dessert_id=available.id, message="available"),
+    )
+    assert response.status_code == 201
 
     missing = await client.post("/api/public/inquiries", json=_payload(dessert_id=9999, message="other"))
     assert missing.status_code == 404

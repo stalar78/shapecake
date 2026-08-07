@@ -5,6 +5,8 @@ import type { FormEvent } from "react";
 import {
   ApiError,
   submitPublicInquiry,
+  type DessertVariant,
+  type FulfillmentMethod,
   type PreferredContactChannel,
   type PublicCategory,
   type PublicDessertSummary,
@@ -14,22 +16,28 @@ type InquiryFormProps = {
   apiBaseUrl: string;
   categories?: PublicCategory[];
   desserts?: PublicDessertSummary[];
-  dessert?: { id: number; name: string } | null;
+  dessert?: { id: number; name: string; variants?: DessertVariant[] } | null;
 };
 
 export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], dessert = null }: InquiryFormProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [reference, setReference] = useState("");
+  const [selectedDessertId, setSelectedDessertId] = useState(dessert?.id ?? 0);
+  const [selectedVariantId, setSelectedVariantId] = useState(0);
+  const selectedDessert = dessert ?? desserts.find((item) => item.id === selectedDessertId) ?? null;
+  const availableVariants = selectedDessert?.variants?.filter((variant) => variant.is_available) ?? [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const quantity = String(form.get("quantity") ?? "").trim();
-    const dessertValue = dessert?.id ?? Number(form.get("dessert_id") || 0);
+    const dessertValue = dessert?.id ?? selectedDessertId;
+    const variantValue = availableVariants.some((variant) => variant.id === selectedVariantId) ? selectedVariantId : 0;
     const phone = optionalString(form.get("phone"));
     const email = optionalString(form.get("email"));
     const preferred = String(form.get("preferred_contact_channel") ?? "email") as PreferredContactChannel;
+    const fulfillment = String(form.get("fulfillment_method") ?? "pickup") as FulfillmentMethod;
     const requestedDate = optionalString(form.get("requested_date"));
     setStatus("loading");
     setMessage("");
@@ -61,8 +69,12 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
         email,
         preferred_contact_channel: preferred,
         dessert_id: dessertValue > 0 ? dessertValue : null,
+        variant_id: variantValue > 0 ? variantValue : null,
+        fulfillment_method: fulfillment,
         requested_date: requestedDate,
         quantity: quantity ? Number(quantity) : null,
+        recipe_preferences: String(form.get("recipe_preferences") ?? ""),
+        decor_preferences: String(form.get("decor_preferences") ?? ""),
         message: String(form.get("message") ?? ""),
         consent_personal_data: form.get("consent_personal_data") === "on",
       });
@@ -94,7 +106,15 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
           <option value="telegram">Telegram</option>
         </select>
         {!dessert ? (
-          <select className="rounded-2xl border border-stone-300 px-4 py-3" name="dessert_id" defaultValue="">
+          <select
+            className="rounded-2xl border border-stone-300 px-4 py-3"
+            name="dessert_id"
+            defaultValue=""
+            onChange={(event) => {
+              setSelectedDessertId(Number(event.currentTarget.value || 0));
+              setSelectedVariantId(0);
+            }}
+          >
             <option value="">No dessert selected</option>
             {categories.length ? <option disabled>Published desserts</option> : null}
             {desserts.map((item) => (
@@ -104,10 +124,29 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
             ))}
           </select>
         ) : null}
+        <select
+          className="rounded-2xl border border-stone-300 px-4 py-3"
+          name="variant_id"
+          value={selectedVariantId || ""}
+          onChange={(event) => setSelectedVariantId(Number(event.currentTarget.value || 0))}
+        >
+          <option value="">No weight selected</option>
+          {availableVariants.map((variant) => (
+            <option key={variant.id} value={variant.id}>
+              {variant.weight_value} {variant.weight_unit}
+            </option>
+          ))}
+        </select>
+        <select className="rounded-2xl border border-stone-300 px-4 py-3" name="fulfillment_method" defaultValue="pickup" required>
+          <option value="pickup">Pickup</option>
+          <option value="delivery">Delivery</option>
+        </select>
         <div className="grid gap-3 sm:grid-cols-2">
           <input className="rounded-2xl border border-stone-300 px-4 py-3" name="requested_date" type="date" />
           <input className="rounded-2xl border border-stone-300 px-4 py-3" name="quantity" type="number" min="1" max="10000" placeholder="Servings / units" />
         </div>
+        <textarea className="min-h-24 rounded-2xl border border-stone-300 px-4 py-3" name="recipe_preferences" maxLength={2000} placeholder="Recipe preferences, if any" />
+        <textarea className="min-h-24 rounded-2xl border border-stone-300 px-4 py-3" name="decor_preferences" maxLength={2000} placeholder="Decor preferences, if any" />
         <textarea className="min-h-32 rounded-2xl border border-stone-300 px-4 py-3" name="message" placeholder="Tell us what you need" required />
         <label className="flex gap-3 text-sm text-stone-700">
           <input name="consent_personal_data" type="checkbox" required />

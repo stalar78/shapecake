@@ -15,7 +15,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.models import AdminUser
 from app.categories.models import Category
-from app.desserts.models import Dessert
+from app.desserts.models import Dessert, DessertVariant
 from app.inquiries.models import Inquiry, InquiryStatusHistory
 from app.inquiries.schemas import AdminInquiryResponse, PublicInquiryCreate
 from app.inquiries.status import InquiryStatus, assert_transition_allowed
@@ -82,8 +82,12 @@ def _fingerprint(payload: PublicInquiryCreate) -> str:
             payload.phone or "",
             payload.email or "",
             str(payload.dessert_id or ""),
+            str(payload.variant_id or ""),
+            payload.fulfillment_method,
             payload.requested_date.isoformat() if payload.requested_date else "",
             str(payload.quantity or ""),
+            " ".join(payload.recipe_preferences.lower().split()),
+            " ".join(payload.decor_preferences.lower().split()),
             " ".join(payload.message.lower().split()),
         ]
     )
@@ -98,6 +102,11 @@ def _client_key(request: Request) -> str:
 async def _public_dessert(db: AsyncSession, dessert_id: int | None) -> Dessert | None:
     if dessert_id is None:
         return None
+    active_variant_exists = (
+        select(DessertVariant.id)
+        .where(DessertVariant.dessert_id == Dessert.id, DessertVariant.archived_at.is_(None))
+        .exists()
+    )
     result = await db.execute(
         select(Dessert)
         .join(Category, Dessert.category_id == Category.id)
@@ -106,14 +115,44 @@ async def _public_dessert(db: AsyncSession, dessert_id: int | None) -> Dessert |
             Dessert.id == dessert_id,
             Dessert.archived_at.is_(None),
             Dessert.is_published.is_(True),
+            Dessert.is_available.is_(True),
             Category.archived_at.is_(None),
             Category.is_visible.is_(True),
+            active_variant_exists,
         )
     )
     dessert = result.scalar_one_or_none()
     if dessert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dessert not found")
     return dessert
+
+
+async def _public_variant(
+    db: AsyncSession,
+    dessert: Dessert | None,
+    variant_id: int | None,
+) -> DessertVariant | None:
+    if variant_id is None:
+        return None
+    if dessert is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Variant requires a dessert",
+        )
+    variant = await db.get(DessertVariant, variant_id)
+    if variant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Variant not found")
+    if variant.dessert_id != dessert.id:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Variant does not belong to the selected dessert",
+        )
+    if variant.archived_at is not None or not variant.is_available:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Variant is not available",
+        )
+    return variant
 
 
 async def create_public_inquiry(
@@ -126,6 +165,7 @@ async def create_public_inquiry(
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="Too many inquiry attempts")
 
     dessert = await _public_dessert(db, payload.dessert_id)
+    variant = await _public_variant(db, dessert, payload.variant_id)
     fingerprint = _fingerprint(payload)
     duplicate_cutoff = _now() - DUPLICATE_WINDOW
     duplicate = await db.scalar(
@@ -142,6 +182,12 @@ async def create_public_inquiry(
         public_reference=_public_reference(),
         dessert_id=dessert.id if dessert else None,
         dessert_name_snapshot=dessert.name if dessert else None,
+        variant_id=variant.id if variant else None,
+        variant_weight_value_snapshot=str(variant.weight_value) if variant else None,
+        variant_weight_unit_snapshot=variant.weight_unit if variant else None,
+        fulfillment_method=payload.fulfillment_method,
+        recipe_preferences=payload.recipe_preferences,
+        decor_preferences=payload.decor_preferences,
         customer_name=payload.customer_name,
         phone=payload.phone,
         email=payload.email,

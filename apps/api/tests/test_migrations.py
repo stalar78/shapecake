@@ -89,6 +89,29 @@ async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
                     )
                 )
             }
+            stage_06_columns = {
+                row[0]
+                for row in (
+                    await connection.execute(
+                        text(
+                            """
+                            SELECT column_name
+                            FROM information_schema.columns
+                            WHERE table_schema = 'public'
+                              AND table_name = 'inquiries'
+                              AND column_name IN (
+                                  'variant_id',
+                                  'variant_weight_value_snapshot',
+                                  'variant_weight_unit_snapshot',
+                                  'fulfillment_method',
+                                  'recipe_preferences',
+                                  'decor_preferences'
+                              )
+                            """
+                        )
+                    )
+                )
+            }
             constraints = {
                 row[0]
                 for row in (
@@ -117,7 +140,7 @@ async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
                     )
                 )
             }
-            return tables, constraints | indexes | stage_05_columns, int(singleton_count or 0)
+            return tables, constraints | indexes | stage_05_columns | stage_06_columns, int(singleton_count or 0)
     finally:
         await engine.dispose()
 
@@ -175,6 +198,15 @@ def run_migration_smoke_test() -> None:
         "ix_promotions_public_order",
         "about_master_title",
         "about_master_text",
+        "variant_id",
+        "variant_weight_value_snapshot",
+        "variant_weight_unit_snapshot",
+        "fulfillment_method",
+        "recipe_preferences",
+        "decor_preferences",
+        "fk_inquiries_variant_id_dessert_variants",
+        "ck_inquiries_fulfillment_method",
+        "ix_inquiries_variant_id",
     } <= constraints
     assert singleton_count == 1
 

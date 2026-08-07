@@ -190,6 +190,7 @@ export type AdminUser = {
 
 export type InquiryStatus = 'new' | 'in_progress' | 'waiting_customer' | 'confirmed' | 'completed' | 'cancelled' | 'spam'
 export type PreferredContactChannel = 'phone' | 'email' | 'whatsapp' | 'telegram'
+export type FulfillmentMethod = 'pickup' | 'delivery'
 
 export type PublicInquiryInput = {
   customer_name: string
@@ -197,8 +198,12 @@ export type PublicInquiryInput = {
   email?: string | null
   preferred_contact_channel: PreferredContactChannel
   dessert_id?: number | null
+  variant_id?: number | null
+  fulfillment_method: FulfillmentMethod
   requested_date?: string | null
   quantity?: number | null
+  recipe_preferences?: string
+  decor_preferences?: string
   message: string
   consent_personal_data: boolean
 }
@@ -222,6 +227,10 @@ export type AdminInquiry = {
   public_reference: string
   dessert_id: number | null
   dessert_name_snapshot: string | null
+  variant_id: number | null
+  variant_weight_value_snapshot: string | null
+  variant_weight_unit_snapshot: string | null
+  fulfillment_method: FulfillmentMethod
   dessert: { id: number; name: string; slug: string } | null
   customer_name: string
   phone: string | null
@@ -229,6 +238,8 @@ export type AdminInquiry = {
   preferred_contact_channel: PreferredContactChannel
   requested_date: string | null
   quantity: number | null
+  recipe_preferences: string
+  decor_preferences: string
   message: string
   consent_personal_data: boolean
   status: InquiryStatus

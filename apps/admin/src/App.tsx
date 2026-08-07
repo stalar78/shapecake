@@ -450,11 +450,15 @@ function InquiryDetail({
         <div><dt>Phone</dt><dd>{inquiry.phone ?? 'Not provided'}</dd></div>
         <div><dt>Email</dt><dd>{inquiry.email ?? 'Not provided'}</dd></div>
         <div><dt>Dessert</dt><dd>{inquiry.dessert?.name ?? inquiry.dessert_name_snapshot ?? 'No dessert reference'}</dd></div>
+        <div><dt>Variant</dt><dd>{variantSnapshot(inquiry)}</dd></div>
+        <div><dt>Fulfillment</dt><dd>{inquiry.fulfillment_method}</dd></div>
         <div><dt>Requested date</dt><dd>{inquiry.requested_date ?? 'Flexible'}</dd></div>
         <div><dt>Quantity</dt><dd>{inquiry.quantity ?? 'Not specified'}</dd></div>
         <div><dt>Created</dt><dd>{formatDateTime(inquiry.created_at)}</dd></div>
         <div><dt>Status changed</dt><dd>{formatDateTime(inquiry.status_changed_at)}</dd></div>
       </dl>
+      {inquiry.recipe_preferences ? <p className="note-box">Recipe preferences: {inquiry.recipe_preferences}</p> : null}
+      {inquiry.decor_preferences ? <p className="note-box">Decor preferences: {inquiry.decor_preferences}</p> : null}
       <p className="note-box">{inquiry.message}</p>
 
       <form
@@ -1173,6 +1177,13 @@ function formatDateTime(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function variantSnapshot(inquiry: AdminInquiry) {
+  if (!inquiry.variant_weight_value_snapshot || !inquiry.variant_weight_unit_snapshot) {
+    return 'No variant selected'
+  }
+  return `${inquiry.variant_weight_value_snapshot} ${inquiry.variant_weight_unit_snapshot}`
 }
 
 function nullableNumber(value: FormDataEntryValue | null) {

@@ -65,7 +65,7 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
           </div>
         </dl>
         <div className="mt-8">
-          <InquiryForm apiBaseUrl={apiBaseUrl} dessert={{ id: dessert.id, name: dessert.name }} />
+          <InquiryForm apiBaseUrl={apiBaseUrl} dessert={dessert} />
         </div>
       </section>
 

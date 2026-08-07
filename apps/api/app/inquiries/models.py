@@ -20,7 +20,7 @@ from app.db.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
     from app.auth.models import AdminUser
-    from app.desserts.models import Dessert
+    from app.desserts.models import Dessert, DessertVariant
 
 
 class Inquiry(TimestampMixin, Base):
@@ -30,6 +30,16 @@ class Inquiry(TimestampMixin, Base):
     public_reference: Mapped[str] = mapped_column(String(40), nullable=False, unique=True)
     dessert_id: Mapped[int | None] = mapped_column(ForeignKey("desserts.id", ondelete="SET NULL"), nullable=True, index=True)
     dessert_name_snapshot: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    variant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("dessert_variants.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    variant_weight_value_snapshot: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    variant_weight_unit_snapshot: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    fulfillment_method: Mapped[str] = mapped_column(String(16), nullable=False, default="pickup", server_default="pickup")
+    recipe_preferences: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    decor_preferences: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     customer_name: Mapped[str] = mapped_column(String(160), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
     email: Mapped[str | None] = mapped_column(String(254), nullable=True)
@@ -47,6 +57,7 @@ class Inquiry(TimestampMixin, Base):
     spam_marked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     dessert: Mapped[Dessert | None] = relationship()
+    variant: Mapped[DessertVariant | None] = relationship()
     status_history: Mapped[list[InquiryStatusHistory]] = relationship(
         back_populates="inquiry",
         cascade="all, delete-orphan",
@@ -61,6 +72,10 @@ class Inquiry(TimestampMixin, Base):
         CheckConstraint(
             "preferred_contact_channel IN ('phone', 'email', 'whatsapp', 'telegram')",
             name="ck_inquiries_preferred_contact_channel",
+        ),
+        CheckConstraint(
+            "fulfillment_method IN ('pickup', 'delivery')",
+            name="ck_inquiries_fulfillment_method",
         ),
         CheckConstraint("consent_personal_data IS TRUE", name="ck_inquiries_consent_true"),
         CheckConstraint("phone IS NOT NULL OR email IS NOT NULL", name="ck_inquiries_contact_present"),
