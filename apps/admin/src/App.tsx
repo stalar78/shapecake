@@ -4,6 +4,8 @@ import {
   AdminApi,
   type AdminCategory,
   type AdminDessert,
+  type AdminInquiry,
+  type InquiryStatus,
   type AdminUser,
 } from '@cake-and-shape/api-client'
 import './index.css'
@@ -16,6 +18,13 @@ function App() {
   const [categories, setCategories] = useState<AdminCategory[]>([])
   const [desserts, setDesserts] = useState<AdminDessert[]>([])
   const [selectedDessert, setSelectedDessert] = useState<AdminDessert | null>(null)
+  const [inquiries, setInquiries] = useState<AdminInquiry[]>([])
+  const [inquiryTotal, setInquiryTotal] = useState(0)
+  const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiry | null>(null)
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<InquiryStatus | ''>('')
+  const [inquiryChannelFilter, setInquiryChannelFilter] = useState('')
+  const [inquirySearch, setInquirySearch] = useState('')
+  const [inquiryOffset, setInquiryOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -26,7 +35,7 @@ function App() {
         const restored = await api.me()
         if (!cancelled) {
           setUser(restored)
-          await loadCatalog()
+          await loadWorkspace()
         }
       } catch {
         // Login form is shown below.
@@ -49,11 +58,33 @@ function App() {
     setSelectedDessert((current) => nextDesserts.find((dessert) => dessert.id === current?.id) ?? nextDesserts[0] ?? null)
   }
 
+  async function loadInquiries(
+    statusFilter = inquiryStatusFilter,
+    offset = inquiryOffset,
+    channelFilter = inquiryChannelFilter,
+    search = inquirySearch,
+  ) {
+    const next = await api.inquiries({
+      status: statusFilter || undefined,
+      preferred_contact_channel: channelFilter ? (channelFilter as 'phone' | 'email' | 'whatsapp' | 'telegram') : undefined,
+      search: search || undefined,
+      limit: 10,
+      offset,
+    })
+    setInquiries(next.items)
+    setInquiryTotal(next.total)
+    setSelectedInquiry((current) => next.items.find((inquiry) => inquiry.id === current?.id) ?? next.items[0] ?? null)
+  }
+
+  async function loadWorkspace() {
+    await Promise.all([loadCatalog(), loadInquiries()])
+  }
+
   async function run(action: () => Promise<void>, success: string) {
     setMessage('')
     try {
       await action()
-      await loadCatalog()
+      await loadWorkspace()
       setMessage(success)
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Request failed')
@@ -66,7 +97,7 @@ function App() {
     try {
       const loggedIn = await api.login(form.get('email'), form.get('password'))
       setUser(loggedIn)
-      await loadCatalog()
+      await loadWorkspace()
       setMessage('')
     } catch {
       setMessage('Login failed. Check the email and password.')
@@ -79,6 +110,8 @@ function App() {
     setCategories([])
     setDesserts([])
     setSelectedDessert(null)
+    setInquiries([])
+    setSelectedInquiry(null)
   }
 
   if (loading) {
@@ -129,8 +162,190 @@ function App() {
           setSelectedDessert={setSelectedDessert}
           run={run}
         />
+        <InquiryPanel
+          inquiries={inquiries}
+          total={inquiryTotal}
+          offset={inquiryOffset}
+          statusFilter={inquiryStatusFilter}
+          channelFilter={inquiryChannelFilter}
+          search={inquirySearch}
+          selectedInquiry={selectedInquiry}
+          setSelectedInquiry={setSelectedInquiry}
+          setStatusFilter={(value) => {
+            setInquiryStatusFilter(value)
+            setInquiryOffset(0)
+            void loadInquiries(value, 0, inquiryChannelFilter, inquirySearch)
+          }}
+          setChannelFilter={(value) => {
+            setInquiryChannelFilter(value)
+            setInquiryOffset(0)
+            void loadInquiries(inquiryStatusFilter, 0, value, inquirySearch)
+          }}
+          setSearch={(value) => {
+            setInquirySearch(value)
+            setInquiryOffset(0)
+            void loadInquiries(inquiryStatusFilter, 0, inquiryChannelFilter, value)
+          }}
+          page={(nextOffset) => {
+            setInquiryOffset(nextOffset)
+            void loadInquiries(inquiryStatusFilter, nextOffset, inquiryChannelFilter, inquirySearch)
+          }}
+          run={run}
+        />
       </section>
     </main>
+  )
+}
+
+const transitionMap: Record<InquiryStatus, InquiryStatus[]> = {
+  new: ['in_progress', 'confirmed', 'cancelled', 'spam'],
+  in_progress: ['waiting_customer', 'confirmed', 'cancelled', 'spam'],
+  waiting_customer: ['in_progress', 'confirmed', 'cancelled', 'spam'],
+  confirmed: ['in_progress', 'completed', 'cancelled'],
+  completed: [],
+  cancelled: [],
+  spam: [],
+}
+
+function InquiryPanel({
+  inquiries,
+  total,
+  offset,
+  statusFilter,
+  channelFilter,
+  search,
+  selectedInquiry,
+  setSelectedInquiry,
+  setStatusFilter,
+  setChannelFilter,
+  setSearch,
+  page,
+  run,
+}: {
+  inquiries: AdminInquiry[]
+  total: number
+  offset: number
+  statusFilter: InquiryStatus | ''
+  channelFilter: string
+  search: string
+  selectedInquiry: AdminInquiry | null
+  setSelectedInquiry: (inquiry: AdminInquiry | null) => void
+  setStatusFilter: (status: InquiryStatus | '') => void
+  setChannelFilter: (channel: string) => void
+  setSearch: (search: string) => void
+  page: (offset: number) => void
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  const limit = 10
+  return (
+    <section className="card stack wide">
+      <div className="section-heading">
+        <div>
+          <h2>Inquiries</h2>
+          <p className="muted">{total} total customer requests</p>
+        </div>
+        <div className="filters">
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.currentTarget.value as InquiryStatus | '')}>
+            <option value="">All statuses</option>
+            {Object.keys(transitionMap).map((status) => (
+              <option key={status} value={status}>
+                {status.replaceAll('_', ' ')}
+              </option>
+            ))}
+          </select>
+          <select value={channelFilter} onChange={(event) => setChannelFilter(event.currentTarget.value)}>
+            <option value="">All channels</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="telegram">Telegram</option>
+          </select>
+          <input value={search} onChange={(event) => setSearch(event.currentTarget.value)} placeholder="Search contact/ref" />
+        </div>
+      </div>
+
+      {inquiries.length === 0 ? <p className="muted">No inquiries match this filter.</p> : null}
+      <div className="list">
+        {inquiries.map((inquiry) => (
+          <button className="row-button" type="button" key={inquiry.id} onClick={() => setSelectedInquiry(inquiry)}>
+            {inquiry.customer_name}
+            <span>{inquiry.status.replaceAll('_', ' ')}</span>
+          </button>
+        ))}
+      </div>
+      <div className="row-actions">
+        <button className="secondary" type="button" disabled={offset === 0} onClick={() => page(Math.max(0, offset - limit))}>
+          Previous
+        </button>
+        <span className="muted">
+          {offset + 1}-{Math.min(offset + limit, total)} of {total}
+        </span>
+        <button className="secondary" type="button" disabled={offset + limit >= total} onClick={() => page(offset + limit)}>
+          Next
+        </button>
+      </div>
+
+      {selectedInquiry ? <InquiryDetail inquiry={selectedInquiry} run={run} /> : null}
+    </section>
+  )
+}
+
+function InquiryDetail({
+  inquiry,
+  run,
+}: {
+  inquiry: AdminInquiry
+  run: (action: () => Promise<void>, success: string) => Promise<void>
+}) {
+  return (
+    <section className="editor stack">
+      <h3>
+        {inquiry.customer_name} <span className="muted">#{inquiry.public_reference}</span>
+      </h3>
+      <dl className="details">
+        <div><dt>Status</dt><dd>{inquiry.status.replaceAll('_', ' ')}</dd></div>
+        <div><dt>Preferred contact</dt><dd>{inquiry.preferred_contact_channel}</dd></div>
+        <div><dt>Phone</dt><dd>{inquiry.phone ?? 'Not provided'}</dd></div>
+        <div><dt>Email</dt><dd>{inquiry.email ?? 'Not provided'}</dd></div>
+        <div><dt>Dessert</dt><dd>{inquiry.dessert?.name ?? inquiry.dessert_name_snapshot ?? 'No dessert reference'}</dd></div>
+        <div><dt>Requested date</dt><dd>{inquiry.requested_date ?? 'Flexible'}</dd></div>
+        <div><dt>Quantity</dt><dd>{inquiry.quantity ?? 'Not specified'}</dd></div>
+        <div><dt>Created</dt><dd>{formatDateTime(inquiry.created_at)}</dd></div>
+        <div><dt>Status changed</dt><dd>{formatDateTime(inquiry.status_changed_at)}</dd></div>
+      </dl>
+      <p className="note-box">{inquiry.message}</p>
+
+      <form
+        className="form"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const form = new FormData(event.currentTarget)
+          void run(() => api.updateInquiryNotes(inquiry.id, String(form.get('internal_notes') ?? '')).then(() => undefined), 'Inquiry notes updated.')
+        }}
+      >
+        <textarea name="internal_notes" defaultValue={inquiry.internal_notes} placeholder="Internal notes" />
+        <button type="submit">Save notes</button>
+      </form>
+
+      <div className="inline-form">
+        {transitionMap[inquiry.status].map((target) => (
+          <button key={target} type="button" className="secondary" onClick={() => void run(() => api.transitionInquiry(inquiry.id, target).then(() => undefined), 'Inquiry status updated.')}>
+            Mark {target.replaceAll('_', ' ')}
+          </button>
+        ))}
+        {transitionMap[inquiry.status].length === 0 ? <span className="muted">Terminal status</span> : null}
+      </div>
+
+      <div className="history">
+        <strong>Status history</strong>
+        {inquiry.status_history.length === 0 ? <p className="muted">No transitions yet.</p> : null}
+        {inquiry.status_history.map((entry) => (
+          <p key={entry.id}>
+            {entry.from_status.replaceAll('_', ' ')} to {entry.to_status.replaceAll('_', ' ')} at {formatDateTime(entry.changed_at)}
+          </p>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -497,6 +712,13 @@ function DessertEditor({
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price / 100)
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 function moveOrder(items: Array<{ id: number }>, from: number, to: number) {

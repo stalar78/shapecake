@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPublicDessert } from "@cake-and-shape/api-client";
+import { InquiryForm } from "../../InquiryForm";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -62,6 +63,9 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
             <dd>{dessert.allergens || "Not specified"}</dd>
           </div>
         </dl>
+        <div className="mt-8">
+          <InquiryForm apiBaseUrl={apiBaseUrl} dessert={{ id: dessert.id, name: dessert.name }} />
+        </div>
       </section>
     </main>
   );

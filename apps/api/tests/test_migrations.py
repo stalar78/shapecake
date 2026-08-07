@@ -37,6 +37,8 @@ async def _clean_stage_01_tables(database_url: str) -> None:
     try:
         async with engine.begin() as connection:
             await connection.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS inquiry_status_history CASCADE"))
+            await connection.execute(text("DROP TABLE IF EXISTS inquiries CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS dessert_images CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS dessert_variants CASCADE"))
             await connection.execute(text("DROP TABLE IF EXISTS desserts CASCADE"))
@@ -125,6 +127,8 @@ def run_migration_smoke_test() -> None:
         "desserts",
         "dessert_variants",
         "dessert_images",
+        "inquiries",
+        "inquiry_status_history",
         "alembic_version",
     } <= tables
     assert {
@@ -134,6 +138,13 @@ def run_migration_smoke_test() -> None:
         "ck_dessert_variants_old_price_gt_price",
         "uq_dessert_variants_active_weight",
         "uq_dessert_images_active_primary",
+        "uq_inquiries_public_reference",
+        "ck_inquiries_status",
+        "ck_inquiries_consent_true",
+        "ix_inquiries_status",
+        "ix_inquiries_created_at",
+        "ix_inquiries_requested_date",
+        "ix_inquiry_status_history_inquiry_id",
     } <= constraints
     assert singleton_count == 1
 

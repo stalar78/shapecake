@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getPublicCatalog, getPublicCategories } from "@cake-and-shape/api-client";
+import { InquiryForm } from "./InquiryForm";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -85,6 +86,8 @@ export default async function Home({
           </Link>
         ))}
       </section>
+
+      <InquiryForm apiBaseUrl={apiBaseUrl} categories={categories} desserts={catalog?.items ?? []} />
     </main>
   );
 }

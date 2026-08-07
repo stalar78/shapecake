@@ -96,6 +96,80 @@ export type AdminUser = {
   email: string
 }
 
+export type InquiryStatus = 'new' | 'in_progress' | 'waiting_customer' | 'confirmed' | 'completed' | 'cancelled' | 'spam'
+export type PreferredContactChannel = 'phone' | 'email' | 'whatsapp' | 'telegram'
+
+export type PublicInquiryInput = {
+  customer_name: string
+  phone?: string | null
+  email?: string | null
+  preferred_contact_channel: PreferredContactChannel
+  dessert_id?: number | null
+  requested_date?: string | null
+  quantity?: number | null
+  message: string
+  consent_personal_data: boolean
+}
+
+export type PublicInquiryAcknowledgement = {
+  acknowledgement: string
+  public_reference: string
+  created_at: string
+}
+
+export type InquiryStatusHistory = {
+  id: number
+  from_status: InquiryStatus
+  to_status: InquiryStatus
+  changed_at: string
+  administrator_id: number | null
+}
+
+export type AdminInquiry = {
+  id: number
+  public_reference: string
+  dessert_id: number | null
+  dessert_name_snapshot: string | null
+  dessert: { id: number; name: string; slug: string } | null
+  customer_name: string
+  phone: string | null
+  email: string | null
+  preferred_contact_channel: PreferredContactChannel
+  requested_date: string | null
+  quantity: number | null
+  message: string
+  consent_personal_data: boolean
+  status: InquiryStatus
+  internal_notes: string
+  created_at: string
+  updated_at: string
+  status_changed_at: string
+  completed_at: string | null
+  cancelled_at: string | null
+  spam_marked_at: string | null
+  status_history: InquiryStatusHistory[]
+}
+
+export type AdminInquiryList = {
+  items: AdminInquiry[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export type AdminInquiryFilters = {
+  status?: InquiryStatus
+  preferred_contact_channel?: PreferredContactChannel
+  dessert_id?: number
+  requested_from?: string
+  requested_to?: string
+  created_from?: string
+  created_to?: string
+  search?: string
+  limit?: number
+  offset?: number
+}
+
 export type ReorderItem = {
   id: number
   sort_order: number
@@ -103,10 +177,29 @@ export type ReorderItem = {
 
 type Fetcher = typeof fetch
 
+export class ApiError extends Error {
+  readonly status: number
+  readonly detail: unknown
+
+  constructor(status: number, detail: unknown, fallback: string) {
+    super(typeof detail === 'string' ? detail : fallback)
+    this.name = 'ApiError'
+    this.status = status
+    this.detail = detail
+  }
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(text || `Request failed with ${response.status}`)
+    let detail: unknown = text
+    try {
+      const parsed = JSON.parse(text) as { detail?: unknown }
+      detail = parsed.detail ?? parsed
+    } catch {
+      // Plain text errors are still useful for callers.
+    }
+    throw new ApiError(response.status, detail, text || `Request failed with ${response.status}`)
   }
   return response.json() as Promise<T>
 }
@@ -138,6 +231,20 @@ export async function getPublicDessert(
   fetcher: Fetcher = fetch,
 ): Promise<PublicDessertDetail> {
   return parseJson(await fetcher(apiUrl(baseUrl, `/public/desserts/${encodeURIComponent(slug)}`), { cache: 'no-store' }))
+}
+
+export async function submitPublicInquiry(
+  baseUrl: string,
+  payload: PublicInquiryInput,
+  fetcher: Fetcher = fetch,
+): Promise<PublicInquiryAcknowledgement> {
+  return parseJson(
+    await fetcher(apiUrl(baseUrl, '/public/inquiries'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+  )
 }
 
 export class AdminApi {
@@ -187,6 +294,34 @@ export class AdminApi {
 
   categories(): Promise<AdminCategory[]> {
     return this.request('/admin/categories')
+  }
+
+  inquiries(filters: AdminInquiryFilters = {}): Promise<AdminInquiryList> {
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, String(value))
+      }
+    }
+    return this.request(`/admin/inquiries${search.size ? `?${search.toString()}` : ''}`)
+  }
+
+  inquiry(id: number): Promise<AdminInquiry> {
+    return this.request(`/admin/inquiries/${id}`)
+  }
+
+  updateInquiryNotes(id: number, internalNotes: string): Promise<AdminInquiry> {
+    return this.mutate(`/admin/inquiries/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ internal_notes: internalNotes }),
+    })
+  }
+
+  transitionInquiry(id: number, targetStatus: InquiryStatus): Promise<AdminInquiry> {
+    return this.mutate(`/admin/inquiries/${id}/transition`, {
+      method: 'POST',
+      body: JSON.stringify({ target_status: targetStatus }),
+    })
   }
 
   createCategory(payload: Partial<AdminCategory>): Promise<AdminCategory> {
