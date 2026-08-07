@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 04 fully accepted and runtime-verified; Stage 05 ready to start
+- Current stage: Stage 05 fully accepted; Stage 06 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -87,6 +87,18 @@ Admin Vite app ─────┘              │
 - functional public review/promotion surfaces and operational admin panels;
 - comprehensive PostgreSQL integration/migration coverage, production Docker builds and live runtime verification.
 
+## Stage 05 result
+
+- singleton `site_settings` retained and extended only with `about_master_title` and `about_master_text`;
+- business-facing hero, contact, working-hours, order, delivery, pickup, prepayment and about-master content is rendered from database-backed settings;
+- optional email/contact URLs are trimmed and validated at the API boundary; non-empty contact URLs must be absolute HTTPS URLs;
+- authenticated settings read and CSRF-protected updates are available through the existing admin application;
+- compact authenticated `GET /api/admin/overview` uses SQL aggregates and bounded deterministic queries;
+- overview exposes published/draft dessert counts, new inquiry count, recent inquiries and current active promotions without message, notes, phone, email or customer-name leakage;
+- promotion activity uses publication/archive/schedule eligibility;
+- typed API client supports settings and overview;
+- Stage 05 migration and PostgreSQL regression suite are accepted.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -101,6 +113,8 @@ Admin Vite app ─────┘              │
 - Client-supplied `X-Forwarded-For` is not trusted for rate-limit identity without an explicit trusted-proxy design.
 - Public reviews/promotions have no mutation endpoints and expose only explicitly public fields.
 - Promotion schedule timestamps accepted by the API are timezone-aware and normalized to UTC.
+- Site-setting contact URLs are empty or absolute HTTPS URLs; unsafe schemes are rejected at the API boundary.
+- Admin overview is authenticated, read-only, SQL-backed and intentionally excludes unnecessary inquiry PII.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
@@ -111,12 +125,13 @@ Admin Vite app ─────┘              │
 - Local media storage is development-oriented; production object storage is deferred.
 - Promotion media is deferred because the current media subsystem is dessert-image-specific.
 - Notification integration currently uses a development-safe adapter; production provider integration is deferred.
+- The current inquiry model is intentionally compact and does not yet represent all order-request fields from the approved specification, notably selected weight/variant and fulfillment method.
 - Public and admin interfaces are functional but final Lovable-based visual design remains deferred.
 
 ## Next stage
 
-Stage 05: complete site-level content/settings and add a compact operational admin overview, using the existing singleton settings model rather than introducing a CMS.
+Stage 06: complete the order-request contract on top of the accepted Stage 03 inquiry workflow without turning it into a cart, checkout or CRM.
 
-Primary goals: expose/manage the remaining business-facing site content required by the MVP (contacts, order/delivery/prepayment terms, hero/about-master content), wire those settings into the public site, and provide a small admin overview for key operational counts/recent inquiries/active promotions.
+Primary goals: connect an inquiry to an optional selected active dessert variant/weight, capture fulfillment method and focused recipe/decor preferences, surface these fields safely in the admin workflow, and update the public form/typed client accordingly.
 
-Stage 05 does not include final Lovable-based visual design, customer accounts, payments, delivery integrations, generic page-builder content, analytics dashboards, or production deployment.
+Stage 06 must preserve the existing opaque-reference, consent, duplicate-suppression, throttling, notification and status-transition invariants. It does not include online payment, price calculation, delivery integration, promo-code engine, customer accounts, general CRM, or final visual design.
