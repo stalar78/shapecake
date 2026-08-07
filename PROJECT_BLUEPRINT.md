@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 05 fully accepted; Stage 06 ready to start
+- Current stage: Stage 06 fully accepted; Stage 07 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -27,77 +27,31 @@ Admin Vite app ─────┘              │
                                    └─> notification adapter
 ```
 
-## Stage 01 result
+## Accepted stages
 
-- npm-workspace monorepo;
-- public Next.js shell;
-- admin Vite/React shell;
-- FastAPI API;
-- async SQLAlchemy and Alembic;
-- database-backed opaque admin sessions;
-- CSRF protection;
-- singleton site settings;
-- guarded PostgreSQL integration and migration tests;
-- separate production and test API Docker targets;
-- explicit destructive-test opt-in;
-- Docker Compose development topology;
-- Makefile command interface;
-- successful full Docker, PostgreSQL, migration, test-suite, administrator-creation, and live endpoint verification.
+### Stage 01
 
-## Stage 02 result
+Foundation: monorepo, Next public shell, Vite admin shell, FastAPI, async SQLAlchemy/Alembic/PostgreSQL, database-backed opaque admin sessions, HttpOnly cookies, CSRF, guarded test database reset, Docker Compose, Makefile and base site settings.
 
-- category, dessert, variant and ordered-image domain;
-- archive, visibility, publication and availability invariants;
-- stable canonical slugs and controlled integrity-error mapping;
-- SQL-correct public eligibility, counting and pagination;
-- integer minor-unit prices and guarded variant uniqueness;
-- transactional one-primary-image behavior;
-- local media adapter with size, MIME, signature and path-safety controls;
-- authenticated and CSRF-protected admin CRUD and reorder operations;
-- public catalog and dessert-detail APIs and pages;
-- shared typed API client;
-- migration and comprehensive PostgreSQL integration tests;
-- successful Docker and live catalog/media smoke verification.
+### Stage 02
 
-## Stage 03 result
+Catalog: categories, desserts, variants, ordered images/media, publication/availability/archive rules, stable slugs, integer minor-unit prices, safe local media storage, public catalog/detail APIs, authenticated admin CRUD/reorder and shared typed client.
 
-- public customer inquiry submission with opaque public references;
-- explicit consent and normalized contact validation;
-- optional references to currently public desserts;
-- requested-date and quantity validation;
-- duplicate suppression with hashed request fingerprints;
-- bounded single-process public rate limiter using hashed peer identities;
-- explicit inquiry lifecycle transitions with status history and terminal timestamps;
-- authenticated, CSRF-protected admin list/detail/filter/notes/transition workflow;
-- notification adapter invoked only after successful inquiry persistence;
-- public inquiry form and operational admin inquiry UI;
-- no public inquiry enumeration or detail retrieval;
-- comprehensive PostgreSQL integration and migration tests;
-- successful production Docker builds and live submission/runtime verification.
+### Stage 03
 
-## Stage 04 result
+Inquiry workflow: public submission, explicit consent, normalized contact data, opaque references, duplicate suppression, bounded rate limiting, status transitions/history, internal notes, notification adapter boundary, public form and admin workflow.
 
-- administrator-managed reviews with optional dessert relation, rating 1..5, publish/feature state, deterministic ordering and archive workflow;
-- public reviews expose presentation-safe fields only and filter eligibility in SQL before count/pagination;
-- administrator-managed promotions with stable canonical slugs, optional single-dessert relation, publication, ordering and archive workflow;
-- UTC-aware optional promotion schedules with API normalization and database constraints;
-- public promotion eligibility is evaluated in SQL before count/pagination and detail retrieval;
-- draft, archived, future and expired promotions are not public;
-- authenticated/CSRF-protected administration and shared typed API client support both domains;
-- functional public review/promotion surfaces and operational admin panels;
-- comprehensive PostgreSQL integration/migration coverage, production Docker builds and live runtime verification.
+### Stage 04
 
-## Stage 05 result
+Reviews/promotions: admin-managed reviews, public review filtering, promotions with canonical slugs and UTC-aware scheduling, SQL public eligibility, typed client and functional public/admin surfaces.
 
-- singleton `site_settings` retained and extended only with `about_master_title` and `about_master_text`;
-- business-facing hero, contact, working-hours, order, delivery, pickup, prepayment and about-master content is rendered from database-backed settings;
-- optional email/contact URLs are trimmed and validated at the API boundary; non-empty contact URLs must be absolute HTTPS URLs;
-- authenticated settings read and CSRF-protected updates are available through the existing admin application;
-- compact authenticated `GET /api/admin/overview` uses SQL aggregates and bounded deterministic queries;
-- overview exposes published/draft dessert counts, new inquiry count, recent inquiries and current active promotions without message, notes, phone, email or customer-name leakage;
-- promotion activity uses publication/archive/schedule eligibility;
-- typed API client supports settings and overview;
-- Stage 05 migration and PostgreSQL regression suite are accepted.
+### Stage 05
+
+Global content and overview: singleton site settings completed with about-master content, contact URL/email validation, database-backed public business content, authenticated settings editor, SQL-backed admin overview with bounded minimal inquiry data.
+
+### Stage 06
+
+Order-request contract completion: optional selected active dessert variant, immutable server-derived weight snapshot, pickup/delivery fulfillment, recipe/decor preferences, availability-aware order eligibility, extended duplicate fingerprint, public form and admin detail updates. No separate Order domain was introduced.
 
 ## Security invariants
 
@@ -115,6 +69,8 @@ Admin Vite app ─────┘              │
 - Promotion schedule timestamps accepted by the API are timezone-aware and normalized to UTC.
 - Site-setting contact URLs are empty or absolute HTTPS URLs; unsafe schemes are rejected at the API boundary.
 - Admin overview is authenticated, read-only, SQL-backed and intentionally excludes unnecessary inquiry PII.
+- Inquiry variant snapshots are server-derived; client-supplied snapshot data is not trusted.
+- Public order requests require an available public dessert, and selected variants must belong to that dessert and be active/available.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
@@ -123,15 +79,15 @@ Admin Vite app ─────┘              │
 - The in-memory login and inquiry rate limiters are single-instance only and must be replaced before horizontal API scaling.
 - Alembic has a low-priority `path_separator` deprecation warning.
 - Local media storage is development-oriented; production object storage is deferred.
-- Promotion media is deferred because the current media subsystem is dessert-image-specific.
+- Promotion/review/global media remain limited by the dessert-specific media subsystem.
 - Notification integration currently uses a development-safe adapter; production provider integration is deferred.
-- The current inquiry model is intentionally compact and does not yet represent all order-request fields from the approved specification, notably selected weight/variant and fulfillment method.
-- Public and admin interfaces are functional but final Lovable-based visual design remains deferred.
+- Public/admin interfaces are functional but final Lovable-based visual design remains deferred.
+- SEO/discoverability requirements from the MVP are not yet implemented as a coherent stage.
 
 ## Next stage
 
-Stage 06: complete the order-request contract on top of the accepted Stage 03 inquiry workflow without turning it into a cart, checkout or CRM.
+Stage 07: SEO and public discoverability foundation.
 
-Primary goals: connect an inquiry to an optional selected active dessert variant/weight, capture fulfillment method and focused recipe/decor preferences, surface these fields safely in the admin workflow, and update the public form/typed client accordingly.
+Primary goals: add correct Next.js metadata, canonical URLs, robots/sitemap, Open Graph defaults and route-specific metadata, structured data for the local business and dessert pages, and safe optional analytics hooks that remain disabled without explicit configuration.
 
-Stage 06 must preserve the existing opaque-reference, consent, duplicate-suppression, throttling, notification and status-transition invariants. It does not include online payment, price calculation, delivery integration, promo-code engine, customer accounts, general CRM, or final visual design.
+Stage 07 does not include marketing content production, paid promotion, production domain/DNS changes, final Lovable visual design, deployment, or a general analytics/reporting system.
