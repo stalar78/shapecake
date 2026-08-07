@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 02 fully accepted and runtime-verified; Stage 03 ready to start
+- Current stage: Stage 03 fully accepted and runtime-verified; Stage 04 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -59,6 +59,22 @@ Admin Vite app ─────┘              │
 - migration and comprehensive PostgreSQL integration tests;
 - successful Docker and live catalog/media smoke verification.
 
+## Stage 03 result
+
+- public customer inquiry submission with opaque public references;
+- explicit consent and normalized contact validation;
+- optional references to currently public desserts;
+- requested-date and quantity validation;
+- duplicate suppression with hashed request fingerprints;
+- bounded single-process public rate limiter using hashed peer identities;
+- explicit inquiry lifecycle transitions with status history and terminal timestamps;
+- authenticated, CSRF-protected admin list/detail/filter/notes/transition workflow;
+- notification adapter invoked only after successful inquiry persistence;
+- public inquiry form and operational admin inquiry UI;
+- no public inquiry enumeration or detail retrieval;
+- comprehensive PostgreSQL integration and migration tests;
+- successful production Docker builds and live submission/runtime verification.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -68,18 +84,22 @@ Admin Vite app ─────┘              │
 - Production API images exclude test tooling.
 - Uploaded filenames never control storage paths.
 - Public APIs never expose absolute media filesystem paths.
+- Public inquiries never expose sequential database identifiers or administrator-only notes.
+- Customer contact data and inquiry messages are not logged.
+- Client-supplied `X-Forwarded-For` is not trusted for rate-limit identity without an explicit trusted-proxy design.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
 ## Current risks
 
-- The in-memory login limiter is single-instance only and must be replaced before horizontal API scaling.
+- The in-memory login and inquiry rate limiters are single-instance only and must be replaced before horizontal API scaling.
 - Alembic has a low-priority `path_separator` deprecation warning.
 - Local media storage is development-oriented; production object storage is deferred.
+- Notification integration currently uses a development-safe adapter; production provider integration is deferred.
 - Public and admin interfaces are functional but final Lovable-based visual design remains deferred.
 
 ## Next stage
 
-Stage 03: customer inquiry workflow with public submission, lifecycle statuses, internal notes, authenticated administration, and notification-adapter boundary.
+Stage 04: reviews and promotions, adding public marketing/content surfaces and focused authenticated administration on top of the accepted catalog and inquiry foundation.
 
-Stage 03 does not include online payments, delivery integration, customer accounts, a full CRM, final visual design, or production notification infrastructure beyond the agreed adapter boundary.
+Stage 04 does not include final Lovable-based visual design, production deployment, customer accounts, payments, delivery integrations, or a general CMS.
