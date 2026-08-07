@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, and Stage 06 order-request contract completion are fully accepted and committed. The next implementation stage is Stage 07: SEO and public discoverability foundation.
+Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, Stage 06 order-request contract completion, and Stage 07 SEO/public discoverability are fully accepted and committed. The next stage is Stage 08: Lovable-based visual design integration and public UX polish.
 
 ## Approved MVP
 
@@ -95,6 +95,17 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - public acknowledgement remains minimal and non-enumerable;
 - admin inquiry detail and public form expose the new fields through the typed API client;
 - Stage 06 migration and PostgreSQL regression coverage are accepted.
+
+## Stage 07 SEO and public discoverability
+
+- one validated public origin drives metadata, canonical URLs, Open Graph and sitemap URLs;
+- native Next.js metadata is used for the public root and detail routes;
+- robots.txt and paginated sitemap.xml are generated intentionally;
+- sitemap includes only available public desserts and active public promotions exposed by the accepted public APIs;
+- Bakery and Product JSON-LD use only existing public business/catalog data;
+- dessert Open Graph reuses existing public media when available;
+- Google Analytics and Yandex Metrica hooks emit no scripts without valid explicit configuration;
+- public lint, typecheck and production build are accepted.
 
 ## Working model
 
