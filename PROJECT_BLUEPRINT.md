@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 06 fully accepted; Stage 07 ready to start
+- Current stage: Stage 07 fully accepted; Stage 08 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -53,6 +53,10 @@ Global content and overview: singleton site settings completed with about-master
 
 Order-request contract completion: optional selected active dessert variant, immutable server-derived weight snapshot, pickup/delivery fulfillment, recipe/decor preferences, availability-aware order eligibility, extended duplicate fingerprint, public form and admin detail updates. No separate Order domain was introduced.
 
+### Stage 07
+
+SEO/discoverability: validated canonical public origin, native Next.js route metadata, canonical/Open Graph output, robots.txt, fully paginated public sitemap, safe Bakery/Product JSON-LD, existing dessert-media reuse for Open Graph, and optional disabled-by-default GA/Yandex Metrica hooks.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -71,6 +75,8 @@ Order-request contract completion: optional selected active dessert variant, imm
 - Admin overview is authenticated, read-only, SQL-backed and intentionally excludes unnecessary inquiry PII.
 - Inquiry variant snapshots are server-derived; client-supplied snapshot data is not trusted.
 - Public order requests require an available public dessert, and selected variants must belong to that dessert and be active/available.
+- Canonical public URLs are derived only from controlled configuration, not arbitrary request Host/forwarded headers.
+- JSON-LD contains only public data and is serialized safely for script embedding.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
@@ -81,13 +87,15 @@ Order-request contract completion: optional selected active dessert variant, imm
 - Local media storage is development-oriented; production object storage is deferred.
 - Promotion/review/global media remain limited by the dessert-specific media subsystem.
 - Notification integration currently uses a development-safe adapter; production provider integration is deferred.
-- Public/admin interfaces are functional but final Lovable-based visual design remains deferred.
-- SEO/discoverability requirements from the MVP are not yet implemented as a coherent stage.
+- Public and admin interfaces are functional but the final Lovable-based visual design remains deferred.
+- Production Nginx/HTTPS/backups/deployment configuration is still incomplete; `infra/nginx` currently has no production configuration.
 
 ## Next stage
 
-Stage 07: SEO and public discoverability foundation.
+Stage 08: Lovable-based visual design integration and public UX polish.
 
-Primary goals: add correct Next.js metadata, canonical URLs, robots/sitemap, Open Graph defaults and route-specific metadata, structured data for the local business and dessert pages, and safe optional analytics hooks that remain disabled without explicit configuration.
+The functional public system and its SEO/data contracts are now stable enough for the planned design phase. Stage 08 starts by creating a Lovable visual reference for the public storefront, then integrating that reference into the existing Next.js application without replacing accepted backend/API contracts.
 
-Stage 07 does not include marketing content production, paid promotion, production domain/DNS changes, final Lovable visual design, deployment, or a general analytics/reporting system.
+Primary goals: establish the final visual language, responsive public layout, hierarchy, catalog/detail/promotion/inquiry presentation, accessible interaction states and consistent mobile/desktop behavior.
+
+Stage 08 does not redesign the backend, admin domain model, API contracts, authentication, data persistence or SEO semantics. Production VPS/Nginx/HTTPS/backups remain a later deployment stage after the visual application is accepted.
