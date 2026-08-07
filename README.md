@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, and Stage 03 customer inquiry workflow are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 04: reviews and promotions.
+Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, and Stage 04 reviews/promotions are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 05: site content, settings, and operational overview.
 
 ## Approved MVP
 
@@ -62,6 +62,16 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - notification adapter boundary whose failure cannot lose accepted inquiries;
 - shared typed API client, public inquiry form and admin inquiry interface;
 - Stage 03 PostgreSQL migration, comprehensive integration tests, Docker builds and live runtime verification.
+
+## Stage 04 reviews and promotions
+
+- administrator-managed reviews with rating, optional dessert relation, publication, featured state, ordering and archive workflow;
+- public review filtering with SQL-correct eligibility and deterministic pagination;
+- administrator-managed promotions with canonical slugs, optional dessert relation and UTC-aware scheduling;
+- public promotion list/detail surfaces that exclude draft, archived, future and expired promotions in SQL;
+- authenticated and CSRF-protected review/promotion administration;
+- shared typed API client plus functional public/admin interfaces;
+- Stage 04 PostgreSQL migration, comprehensive integration tests, production Docker builds and live runtime verification.
 
 ## Working model
 
