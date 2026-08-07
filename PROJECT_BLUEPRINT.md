@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 03 fully accepted and runtime-verified; Stage 04 ready to start
+- Current stage: Stage 04 fully accepted and runtime-verified; Stage 05 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -75,6 +75,18 @@ Admin Vite app ─────┘              │
 - comprehensive PostgreSQL integration and migration tests;
 - successful production Docker builds and live submission/runtime verification.
 
+## Stage 04 result
+
+- administrator-managed reviews with optional dessert relation, rating 1..5, publish/feature state, deterministic ordering and archive workflow;
+- public reviews expose presentation-safe fields only and filter eligibility in SQL before count/pagination;
+- administrator-managed promotions with stable canonical slugs, optional single-dessert relation, publication, ordering and archive workflow;
+- UTC-aware optional promotion schedules with API normalization and database constraints;
+- public promotion eligibility is evaluated in SQL before count/pagination and detail retrieval;
+- draft, archived, future and expired promotions are not public;
+- authenticated/CSRF-protected administration and shared typed API client support both domains;
+- functional public review/promotion surfaces and operational admin panels;
+- comprehensive PostgreSQL integration/migration coverage, production Docker builds and live runtime verification.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -87,6 +99,8 @@ Admin Vite app ─────┘              │
 - Public inquiries never expose sequential database identifiers or administrator-only notes.
 - Customer contact data and inquiry messages are not logged.
 - Client-supplied `X-Forwarded-For` is not trusted for rate-limit identity without an explicit trusted-proxy design.
+- Public reviews/promotions have no mutation endpoints and expose only explicitly public fields.
+- Promotion schedule timestamps accepted by the API are timezone-aware and normalized to UTC.
 - Secrets and real customer data never enter Git.
 - Production writes and deployment require explicit approval.
 
@@ -95,11 +109,14 @@ Admin Vite app ─────┘              │
 - The in-memory login and inquiry rate limiters are single-instance only and must be replaced before horizontal API scaling.
 - Alembic has a low-priority `path_separator` deprecation warning.
 - Local media storage is development-oriented; production object storage is deferred.
+- Promotion media is deferred because the current media subsystem is dessert-image-specific.
 - Notification integration currently uses a development-safe adapter; production provider integration is deferred.
 - Public and admin interfaces are functional but final Lovable-based visual design remains deferred.
 
 ## Next stage
 
-Stage 04: reviews and promotions, adding public marketing/content surfaces and focused authenticated administration on top of the accepted catalog and inquiry foundation.
+Stage 05: complete site-level content/settings and add a compact operational admin overview, using the existing singleton settings model rather than introducing a CMS.
 
-Stage 04 does not include final Lovable-based visual design, production deployment, customer accounts, payments, delivery integrations, or a general CMS.
+Primary goals: expose/manage the remaining business-facing site content required by the MVP (contacts, order/delivery/prepayment terms, hero/about-master content), wire those settings into the public site, and provide a small admin overview for key operational counts/recent inquiries/active promotions.
+
+Stage 05 does not include final Lovable-based visual design, customer accounts, payments, delivery integrations, generic page-builder content, analytics dashboards, or production deployment.
