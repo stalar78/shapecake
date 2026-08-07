@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation and Stage 02 catalog domain are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 03: customer inquiry workflow and administration handling.
+Stage 01 foundation, Stage 02 catalog domain, and Stage 03 customer inquiry workflow are fully accepted, runtime-verified, and committed. The next implementation stage is Stage 04: reviews and promotions.
 
 ## Approved MVP
 
@@ -49,6 +49,19 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - typed shared API client;
 - functional public catalog/detail pages and minimal admin catalog workflows;
 - PostgreSQL migration, integration, media-security and runtime verification.
+
+## Stage 03 customer inquiry workflow
+
+- public inquiry submission with explicit personal-data consent;
+- validated phone/email contact data and preferred contact channel;
+- optional public dessert reference, requested date and quantity;
+- opaque public references with no public inquiry enumeration;
+- duplicate suppression and bounded in-memory public throttling;
+- explicit lifecycle status transitions with compact status history;
+- administrator-only internal notes and authenticated workflow;
+- notification adapter boundary whose failure cannot lose accepted inquiries;
+- shared typed API client, public inquiry form and admin inquiry interface;
+- Stage 03 PostgreSQL migration, comprehensive integration tests, Docker builds and live runtime verification.
 
 ## Working model
 
