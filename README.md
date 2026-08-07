@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, and Stage 05 site content/settings/operational overview are fully accepted and committed. The next implementation stage is Stage 06: order-request contract completion.
+Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, and Stage 06 order-request contract completion are fully accepted and committed. The next implementation stage is Stage 07: SEO and public discoverability foundation.
 
 ## Approved MVP
 
@@ -83,6 +83,18 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - overview exposes published/draft dessert counts, new inquiry count, recent inquiries and currently active promotions without unnecessary customer PII;
 - typed API client remains the integration boundary for both frontends;
 - Stage 05 migration and PostgreSQL regression coverage are accepted.
+
+## Stage 06 order-request contract completion
+
+- existing inquiry domain extended without creating a separate order/checkout subsystem;
+- optional active dessert variant selection with server-derived immutable weight snapshot;
+- explicit pickup/delivery fulfillment method;
+- focused recipe and decor preferences;
+- public inquiry dessert eligibility now includes dessert availability and variant availability;
+- duplicate fingerprint includes the new order-request fields;
+- public acknowledgement remains minimal and non-enumerable;
+- admin inquiry detail and public form expose the new fields through the typed API client;
+- Stage 06 migration and PostgreSQL regression coverage are accepted.
 
 ## Working model
 
