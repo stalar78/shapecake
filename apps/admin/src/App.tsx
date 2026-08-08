@@ -155,8 +155,10 @@ function App() {
     setMessage('')
     try {
       await action()
-      await bootstrapWorkspace()
-      setMessage(success)
+      const refreshed = await bootstrapWorkspace()
+      if (refreshed) {
+        setMessage(success)
+      }
     } catch (error) {
       setMessage(describeError(error, 'Request failed.'))
     }
