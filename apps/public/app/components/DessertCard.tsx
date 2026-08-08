@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { PublicDessertSummary } from "@cake-and-shape/api-client";
-import { apiBaseUrl } from "../seo";
+import { absoluteMediaUrl } from "../seo";
 import { formatPrice } from "./format";
 
 export function DessertCard({ dessert, priority = false }: { dessert: PublicDessertSummary; priority?: boolean }) {
@@ -13,7 +13,7 @@ export function DessertCard({ dessert, priority = false }: { dessert: PublicDess
             alt={dessert.primary_image.alt_text || dessert.name}
             className="h-full w-full object-cover"
             loading={priority ? "eager" : "lazy"}
-            src={`${apiBaseUrl.replace("/api", "")}${dessert.primary_image.url}`}
+            src={absoluteMediaUrl(dessert.primary_image.url) ?? ""}
           />
         ) : (
           <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">

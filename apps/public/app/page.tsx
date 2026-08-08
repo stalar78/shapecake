@@ -12,7 +12,7 @@ import { PublicFooter } from "./components/PublicFooter";
 import { PublicHeader } from "./components/PublicHeader";
 import { formatPrice } from "./components/format";
 import { InquiryForm } from "./InquiryForm";
-import { businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
+import { absoluteMediaUrl, browserApiBaseUrl, businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -87,7 +87,7 @@ export default async function Home({
                 <img
                   alt={heroDessert.primary_image.alt_text || heroDessert.name}
                   className="h-full w-full object-cover"
-                  src={`${apiBaseUrl.replace("/api", "")}${heroDessert.primary_image.url}`}
+                  src={absoluteMediaUrl(heroDessert.primary_image.url) ?? ""}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center px-8 text-center text-[var(--muted)]">
@@ -241,7 +241,7 @@ export default async function Home({
         </section>
 
         <section id="inquiry" className="public-shell py-10">
-          <InquiryForm apiBaseUrl={apiBaseUrl} categories={categories} desserts={catalog?.items ?? []} />
+          <InquiryForm apiBaseUrl={browserApiBaseUrl} categories={categories} desserts={catalog?.items ?? []} />
         </section>
       </main>
       <PublicFooter settings={settings} />

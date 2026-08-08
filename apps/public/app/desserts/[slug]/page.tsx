@@ -6,7 +6,7 @@ import { PublicFooter } from "../../components/PublicFooter";
 import { PublicHeader } from "../../components/PublicHeader";
 import { formatPrice } from "../../components/format";
 import { InquiryForm } from "../../InquiryForm";
-import { absoluteMediaUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
+import { absoluteMediaUrl, browserApiBaseUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -71,7 +71,7 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
                 <img
                   alt={dessert.images[0].alt_text || dessert.name}
                   className="h-full w-full object-cover"
-                  src={`${apiBaseUrl.replace("/api", "")}${dessert.images[0].url}`}
+                  src={absoluteMediaUrl(dessert.images[0].url) ?? ""}
                 />
               ) : (
                 <div className="flex h-full items-center justify-center text-[var(--muted)]">Фото появится позже</div>
@@ -82,7 +82,7 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
                 {dessert.images.slice(1, 4).map((image) => (
                   <div className="aspect-square overflow-hidden border border-[var(--line)] bg-[var(--blush)]" key={image.id}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt={image.alt_text || dessert.name} className="h-full w-full object-cover" src={`${apiBaseUrl.replace("/api", "")}${image.url}`} />
+                    <img alt={image.alt_text || dessert.name} className="h-full w-full object-cover" src={absoluteMediaUrl(image.url) ?? ""} />
                   </div>
                 ))}
               </div>
@@ -145,7 +145,7 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
         </section>
 
         <section className="public-shell py-12">
-          <InquiryForm apiBaseUrl={apiBaseUrl} dessert={dessert} />
+          <InquiryForm apiBaseUrl={browserApiBaseUrl} dessert={dessert} />
         </section>
       </main>
       <PublicFooter settings={settings} />
