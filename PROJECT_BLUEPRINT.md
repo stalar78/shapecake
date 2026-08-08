@@ -3,7 +3,7 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 07 fully accepted; Stage 08 ready to start
+- Current stage: Stage 08 fully accepted; Stage 09 ready to start
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
 
@@ -13,7 +13,7 @@ A custom public dessert catalog and a purpose-built administration application f
 
 ## MVP scope
 
-Included: public storefront, catalog and dessert pages, custom admin, categories, products, variants, media, customer requests, reviews, promotions, site settings, notifications, SEO foundation, Docker/VPS deployment.
+Included: public storefront, catalog and dessert pages, custom admin, categories, products, variants, media, customer requests, reviews, promotions, site settings, notifications, SEO foundation, final public visual integration, Docker/VPS deployment.
 
 Excluded: online payments, customer accounts, delivery integrations, warehouse accounting, loyalty program, full CRM, mobile applications.
 
@@ -57,6 +57,10 @@ Order-request contract completion: optional selected active dessert variant, imm
 
 SEO/discoverability: validated canonical public origin, native Next.js route metadata, canonical/Open Graph output, robots.txt, fully paginated public sitemap, safe Bakery/Product JSON-LD, existing dessert-media reuse for Open Graph, and optional disabled-by-default GA/Yandex Metrica hooks.
 
+### Stage 08
+
+Public visual integration: customer-approved Lovable editorial patisserie concept integrated into the existing Next.js public application without replacing the production architecture. The stage introduced the final warm editorial palette, Cormorant Garamond + Manrope typography, reusable public header/footer/dessert-card components, redesigned homepage/detail/promotion/inquiry surfaces, responsive navigation and accessible focus/reduced-motion behavior. Real API-backed content and the production inquiry workflow were preserved, no Lovable mock business data was imported, and Stage 07 SEO/analytics contracts remained intact. Public lint, typecheck and production build passed. Merged in `0d3f851`.
+
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
@@ -84,18 +88,19 @@ SEO/discoverability: validated canonical public origin, native Next.js route met
 
 - The in-memory login and inquiry rate limiters are single-instance only and must be replaced before horizontal API scaling.
 - Alembic has a low-priority `path_separator` deprecation warning.
-- Local media storage is development-oriented; production object storage is deferred.
+- Local media storage is development-oriented and requires a production persistence/backup decision.
 - Promotion/review/global media remain limited by the dessert-specific media subsystem.
-- Notification integration currently uses a development-safe adapter; production provider integration is deferred.
-- Public and admin interfaces are functional but the final Lovable-based visual design remains deferred.
-- Production Nginx/HTTPS/backups/deployment configuration is still incomplete; `infra/nginx` currently has no production configuration.
+- Notification integration currently uses a development-safe adapter; production provider integration remains a deployment decision.
+- Customer-facing currency is not yet explicitly established in repository contracts, so Stage 08 intentionally avoided inventing a currency symbol.
+- Production Nginx/HTTPS/backups/deployment configuration is incomplete; `infra/nginx` currently has no production configuration.
+- Stage 08 automated frontend checks passed, but full manual browser/runtime smoke should be repeated against the production-like Stage 09 environment before launch acceptance.
 
 ## Next stage
 
-Stage 08: Lovable-based visual design integration and public UX polish.
+Stage 09: production readiness and deployment.
 
-The functional public system and its SEO/data contracts are now stable enough for the planned design phase. Stage 08 starts by creating a Lovable visual reference for the public storefront, then integrating that reference into the existing Next.js application without replacing accepted backend/API contracts.
+The application now has accepted domain functionality, public SEO/discoverability and the final customer-approved public visual system. Stage 09 prepares a reproducible Ubuntu VPS deployment without changing the accepted product model.
 
-Primary goals: establish the final visual language, responsive public layout, hierarchy, catalog/detail/promotion/inquiry presentation, accessible interaction states and consistent mobile/desktop behavior.
+Primary goals: production Docker Compose/runtime configuration, Nginx reverse proxy, domain and HTTPS/TLS setup, environment hardening, persistent PostgreSQL/media storage, backup and restore procedure, trusted-proxy/rate-limit decisions, production notification-provider decision, deployment/runbook documentation, and final end-to-end smoke of public/admin/inquiry/SEO behavior.
 
-Stage 08 does not redesign the backend, admin domain model, API contracts, authentication, data persistence or SEO semantics. Production VPS/Nginx/HTTPS/backups remain a later deployment stage after the visual application is accepted.
+Stage 09 must not introduce unrelated product features. Any remaining non-launch-critical product gaps stay in the post-MVP backlog unless they block safe production operation.
