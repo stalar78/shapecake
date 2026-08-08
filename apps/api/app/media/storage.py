@@ -56,6 +56,24 @@ class LocalMediaStorage:
             original_filename=source.name,
         )
 
+    def restore_local_file(self, source: Path, storage_key: str, content_type: str) -> tuple[str, int]:
+        content = source.read_bytes()
+        if len(content) > self.max_upload_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Image file is too large",
+            )
+        mime_type = self._validate_content(content_type, content)
+        destination = self._path_for_key(storage_key)
+        if destination.exists():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Media file already exists")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+        return mime_type, len(content)
+
+    def exists(self, storage_key: str) -> bool:
+        return self._path_for_key(storage_key).exists()
+
     def delete(self, storage_key: str) -> None:
         path = self._path_for_key(storage_key)
         if path.exists():

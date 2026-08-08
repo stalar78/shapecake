@@ -48,9 +48,11 @@ class DessertSpec:
 @dataclass
 class ImportSummary:
     dry_run: bool
+    mode: str = "import"
     category_action: str = ""
     created: list[str] = field(default_factory=list)
     skipped: list[str] = field(default_factory=list)
+    restored: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
@@ -254,13 +256,65 @@ async def import_initial_catalog(
     return summary
 
 
+async def recover_initial_catalog_media(
+    db: AsyncSession,
+    *,
+    assets_root: Path,
+    settings: Settings,
+    dry_run: bool = False,
+) -> ImportSummary:
+    assets_root = assets_root.resolve()
+    summary = ImportSummary(dry_run=dry_run, mode="restore", category_action="recover known catalog media")
+    if not assets_root.exists() or not assets_root.is_dir():
+        summary.errors.append(f"Assets root not found: {assets_root}")
+        return summary
+
+    storage = LocalMediaStorage(settings.media_root, settings.media_public_base_url, settings.max_upload_bytes)
+    for spec in CATALOG:
+        dessert = await db.scalar(select(Dessert).where(Dessert.slug == spec.slug))
+        if dessert is None:
+            summary.warnings.append(f"{spec.slug}: dessert missing in database")
+            continue
+
+        expected_sources = _expected_image_sources(assets_root, spec, summary)
+        images = (
+            await db.scalars(
+                select(DessertImage)
+                .where(DessertImage.dessert_id == dessert.id, DessertImage.deleted_at.is_(None))
+                .order_by(DessertImage.sort_order, DessertImage.id)
+            )
+        ).all()
+
+        for image in images:
+            source = expected_sources.get(image.original_filename)
+            label = f"{spec.slug}:{image.original_filename}"
+            if source is None:
+                summary.warnings.append(f"{label}: source asset not found")
+                continue
+            if storage.exists(image.storage_key):
+                summary.skipped.append(f"{label} present")
+                continue
+            if dry_run:
+                summary.restored.append(label)
+                continue
+            try:
+                storage.restore_local_file(source, image.storage_key, image.mime_type)
+                summary.restored.append(label)
+            except Exception as exc:  # noqa: BLE001 - CLI recovery summary must continue with other files.
+                summary.errors.append(f"{label}: {exc}")
+    return summary
+
+
 def print_summary(summary: ImportSummary) -> None:
-    mode = "DRY RUN" if summary.dry_run else "IMPORT"
+    mode_name = summary.mode.upper()
+    mode = f"DRY RUN {mode_name}" if summary.dry_run else mode_name
     print(f"{mode}: {summary.category_action}")
     for slug in summary.created:
         print(f"CREATE {slug}")
+    for label in summary.restored:
+        print(f"RESTORE {label}")
     for slug in summary.skipped:
-        print(f"SKIP existing {slug}")
+        print(f"SKIP {slug}")
     for warning in summary.warnings:
         print(f"WARNING {warning}")
     for error in summary.errors:
@@ -360,6 +414,30 @@ def _image_plan(
     return plan
 
 
+def _expected_image_sources(
+    assets_root: Path,
+    spec: DessertSpec,
+    summary: ImportSummary,
+) -> dict[str, Path]:
+    folder = assets_root / spec.slug
+    expected = {
+        f"{spec.slug}-cover.png": folder / f"{spec.slug}-cover.png",
+        f"{spec.slug}-detail.png": folder / f"{spec.slug}-detail.png",
+    }
+    sources: dict[str, Path] = {}
+    cover = expected[f"{spec.slug}-cover.png"]
+    detail = expected[f"{spec.slug}-detail.png"]
+    if cover.exists():
+        sources[cover.name] = cover
+    else:
+        summary.warnings.append(f"{spec.slug}: missing cover image {cover}")
+    if detail.exists():
+        sources[detail.name] = detail
+    else:
+        summary.warnings.append(f"{spec.slug}: missing optional detail image {detail}")
+    return sources
+
+
 def _summarize_dry_run(
     summary: ImportSummary,
     spec: DessertSpec,
@@ -412,6 +490,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import initial Cake & Shape draft catalog.")
     parser.add_argument("--assets-root", required=True, type=Path)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--recover-missing-media", action="store_true")
     return parser.parse_args()
 
 
@@ -419,12 +498,20 @@ async def async_main() -> int:
     args = parse_args()
     settings = get_settings()
     async with AsyncSessionLocal() as db:
-        summary = await import_initial_catalog(
-            db,
-            assets_root=args.assets_root,
-            settings=settings,
-            dry_run=args.dry_run,
-        )
+        if args.recover_missing_media:
+            summary = await recover_initial_catalog_media(
+                db,
+                assets_root=args.assets_root,
+                settings=settings,
+                dry_run=args.dry_run,
+            )
+        else:
+            summary = await import_initial_catalog(
+                db,
+                assets_root=args.assets_root,
+                settings=settings,
+                dry_run=args.dry_run,
+            )
     print_summary(summary)
     return 0 if summary.ok else 1
 
