@@ -26,6 +26,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://shape_cake:change-me@postgres:5432/shape_cake}
     ports:
       - "8000:8000"
+    volumes:
+      - api_media:/app/storage/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,3 +81,4 @@ services:
 
 volumes:
   postgres_data:
+  api_media:
