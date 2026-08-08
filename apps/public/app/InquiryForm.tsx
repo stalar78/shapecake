@@ -92,15 +92,15 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
   }
 
   return (
-    <section className="editorial-card bg-[var(--surface-strong)] p-5 md:p-8">
-      <div className="grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
+    <section className="bg-[var(--blush)] px-5 py-12 md:px-10 md:py-16">
+      <div className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr]">
         <div>
           <p className="eyebrow">Запрос на десерт</p>
-          <h2 className="display mt-3 text-5xl font-semibold leading-none">Расскажите о вашем десерте</h2>
-          <p className="mt-5 text-sm leading-7 text-[var(--muted)]">
+          <h2 className="display mt-4 text-5xl font-semibold leading-none md:text-6xl">Расскажите о вашем десерте</h2>
+          <p className="mt-6 max-w-sm text-sm leading-7 text-[var(--muted)]">
             Это не корзина и не оплата. Мы получим запрос, уточним детали и свяжемся с вами удобным способом.
           </p>
-          {dessert ? <p className="mt-5 border-t border-[var(--line)] pt-5 text-sm font-bold">Выбран десерт: {dessert.name}</p> : null}
+          {dessert ? <p className="mt-6 border-t border-[var(--line)] pt-5 text-sm font-bold">Выбран десерт: {dessert.name}</p> : null}
         </div>
 
         <form className="grid gap-8" onSubmit={handleSubmit}>
@@ -108,39 +108,18 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
             {!dessert ? (
               <label className="field">
                 <span className="field-label">Десерт</span>
-                <select
-                  className="field-control"
-                  name="dessert_id"
-                  value={selectedDessertId || ""}
-                  onChange={(event) => {
-                    setSelectedDessertId(Number(event.currentTarget.value || 0));
-                    setSelectedVariantId(0);
-                  }}
-                >
+                <select className="field-control" name="dessert_id" value={selectedDessertId || ""} onChange={(event) => { setSelectedDessertId(Number(event.currentTarget.value || 0)); setSelectedVariantId(0); }}>
                   <option value="">Можно не выбирать</option>
                   {categories.length ? <option disabled>Доступные десерты</option> : null}
-                  {desserts.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
+                  {desserts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                 </select>
               </label>
             ) : null}
             <label className="field">
               <span className="field-label">Вес / вариант</span>
-              <select
-                className="field-control"
-                name="variant_id"
-                value={selectedVariantId || ""}
-                onChange={(event) => setSelectedVariantId(Number(event.currentTarget.value || 0))}
-              >
+              <select className="field-control" name="variant_id" value={selectedVariantId || ""} onChange={(event) => setSelectedVariantId(Number(event.currentTarget.value || 0))}>
                 <option value="">Уточним позже</option>
-                {availableVariants.map((variant) => (
-                  <option key={variant.id} value={variant.id}>
-                    {variant.weight_value} {variant.weight_unit}
-                  </option>
-                ))}
+                {availableVariants.map((variant) => <option key={variant.id} value={variant.id}>{variant.weight_value} {variant.weight_unit}</option>)}
               </select>
             </label>
             <label className="field">
@@ -150,56 +129,21 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
           </FormBlock>
 
           <FormBlock number="02" title="Когда и как получить">
-            <label className="field">
-              <span className="field-label">Желаемая дата</span>
-              <input className="field-control" name="requested_date" type="date" />
-            </label>
-            <label className="field">
-              <span className="field-label">Формат получения</span>
-              <select className="field-control" name="fulfillment_method" defaultValue="pickup" required>
-                <option value="pickup">Самовывоз</option>
-                <option value="delivery">Доставка</option>
-              </select>
-            </label>
+            <label className="field"><span className="field-label">Желаемая дата</span><input className="field-control" name="requested_date" type="date" /></label>
+            <label className="field"><span className="field-label">Формат получения</span><select className="field-control" name="fulfillment_method" defaultValue="pickup" required><option value="pickup">Самовывоз</option><option value="delivery">Доставка</option></select></label>
           </FormBlock>
 
           <FormBlock number="03" title="Пожелания">
-            <label className="field">
-              <span className="field-label">Вкус / рецепт</span>
-              <textarea className="field-control min-h-28" name="recipe_preferences" maxLength={2000} placeholder="Начинка, сладость, ограничения" />
-            </label>
-            <label className="field">
-              <span className="field-label">Декор</span>
-              <textarea className="field-control min-h-28" name="decor_preferences" maxLength={2000} placeholder="Цвета, настроение, надпись" />
-            </label>
-            <label className="field md:col-span-2">
-              <span className="field-label">Главное сообщение</span>
-              <textarea className="field-control min-h-36" name="message" placeholder="Опишите повод и любые важные детали" required />
-            </label>
+            <label className="field"><span className="field-label">Вкус / рецепт</span><textarea className="field-control min-h-28" name="recipe_preferences" maxLength={2000} placeholder="Начинка, сладость, ограничения" /></label>
+            <label className="field"><span className="field-label">Декор</span><textarea className="field-control min-h-28" name="decor_preferences" maxLength={2000} placeholder="Цвета, настроение, надпись" /></label>
+            <label className="field md:col-span-2"><span className="field-label">Главное сообщение</span><textarea className="field-control min-h-36" name="message" placeholder="Опишите повод и любые важные детали" required /></label>
           </FormBlock>
 
           <FormBlock number="04" title="Как связаться">
-            <label className="field">
-              <span className="field-label">Имя</span>
-              <input className="field-control" name="customer_name" required />
-            </label>
-            <label className="field">
-              <span className="field-label">Телефон</span>
-              <input className="field-control" name="phone" />
-            </label>
-            <label className="field">
-              <span className="field-label">Электронная почта</span>
-              <input className="field-control" name="email" type="email" />
-            </label>
-            <label className="field">
-              <span className="field-label">Предпочтительный канал</span>
-              <select className="field-control" name="preferred_contact_channel" defaultValue="email">
-                <option value="email">Email</option>
-                <option value="phone">Телефон</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="telegram">Telegram</option>
-              </select>
-            </label>
+            <label className="field"><span className="field-label">Имя</span><input className="field-control" name="customer_name" required /></label>
+            <label className="field"><span className="field-label">Телефон</span><input className="field-control" name="phone" /></label>
+            <label className="field"><span className="field-label">Email</span><input className="field-control" name="email" type="email" /></label>
+            <label className="field"><span className="field-label">Предпочтительный канал</span><select className="field-control" name="preferred_contact_channel" defaultValue="email"><option value="email">Email</option><option value="phone">Телефон</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option></select></label>
             <label className="flex gap-3 text-sm leading-6 text-[var(--muted)] md:col-span-2">
               <input className="mt-1 size-4 accent-[var(--primary)]" name="consent_personal_data" type="checkbox" required />
               <span>Я согласен(на) на обработку персональных данных, чтобы Cake &amp; Shape ответили на запрос.</span>
@@ -210,11 +154,7 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
             <button className="button-primary disabled:opacity-60" disabled={status === "loading"} type="submit">
               {status === "loading" ? "Отправляем..." : "Отправить запрос"}
             </button>
-            {status === "success" ? (
-              <p className="border-l-2 border-emerald-700 pl-4 text-sm text-emerald-900">
-                Запрос получен. Ваш номер: <strong>{reference}</strong>
-              </p>
-            ) : null}
+            {status === "success" ? <p className="border-l-2 border-emerald-700 pl-4 text-sm text-emerald-900">Запрос получен. Ваш номер: <strong>{reference}</strong></p> : null}
             {status === "error" ? <p className="border-l-2 border-[var(--primary)] pl-4 text-sm text-[var(--primary-strong)]">{message}</p> : null}
           </div>
         </form>
@@ -225,11 +165,8 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
 
 function FormBlock({ number, title, children }: { number: string; title: string; children: ReactNode }) {
   return (
-    <fieldset className="grid gap-4 border-t border-[var(--line)] pt-5 md:grid-cols-2">
-      <legend className="display mb-3 text-3xl font-semibold">
-        <span className="mr-3 text-base font-bold text-[var(--primary-strong)]">{number}</span>
-        {title}
-      </legend>
+    <fieldset className="grid gap-x-7 gap-y-5 border-t border-[var(--line)] pt-6 md:grid-cols-2">
+      <legend className="display mb-4 text-3xl font-semibold"><span className="mr-4 text-xl font-semibold text-[var(--primary-strong)]">{number}</span>{title}</legend>
       {children}
     </fieldset>
   );
