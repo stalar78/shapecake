@@ -37,16 +37,24 @@ class LocalMediaStorage:
                 )
             chunks.append(chunk)
         content = b"".join(chunks)
-        if not content:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image file is empty")
+        return self._save_content(
+            content,
+            content_type=file.content_type or "",
+            original_filename=file.filename,
+        )
 
-        mime_type = self._validate_content(file.content_type or "", content)
-        extension = ALLOWED_MEDIA_TYPES[mime_type][0]
-        storage_key = f"desserts/{secrets.token_urlsafe(24)}.{extension}"
-        destination = self._path_for_key(storage_key)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(content)
-        return storage_key, self._safe_filename(file.filename), mime_type, len(content)
+    def save_local_file(self, source: Path, content_type: str) -> tuple[str, str, str, int]:
+        content = source.read_bytes()
+        if len(content) > self.max_upload_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                detail="Image file is too large",
+            )
+        return self._save_content(
+            content,
+            content_type=content_type,
+            original_filename=source.name,
+        )
 
     def delete(self, storage_key: str) -> None:
         path = self._path_for_key(storage_key)
@@ -71,6 +79,24 @@ class LocalMediaStorage:
         if not filename:
             return "upload"
         return Path(filename).name[:255]
+
+    def _save_content(
+        self,
+        content: bytes,
+        *,
+        content_type: str,
+        original_filename: str | None,
+    ) -> tuple[str, str, str, int]:
+        if not content:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image file is empty")
+
+        mime_type = self._validate_content(content_type, content)
+        extension = ALLOWED_MEDIA_TYPES[mime_type][0]
+        storage_key = f"desserts/{secrets.token_urlsafe(24)}.{extension}"
+        destination = self._path_for_key(storage_key)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+        return storage_key, self._safe_filename(original_filename), mime_type, len(content)
 
     @staticmethod
     def _validate_content(content_type: str, content: bytes) -> str:
