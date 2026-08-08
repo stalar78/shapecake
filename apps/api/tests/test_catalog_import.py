@@ -5,7 +5,12 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.catalog_import import CATALOG, CATEGORY_SLUG, import_initial_catalog
+from app.catalog_import import (
+    CATALOG,
+    CATEGORY_SLUG,
+    import_initial_catalog,
+    recover_initial_catalog_media,
+)
 from app.categories.models import Category
 from app.core.config import Settings
 from app.desserts.models import Dessert, DessertImage, DessertVariant
@@ -193,3 +198,96 @@ async def test_no_unrelated_records_are_modified(
     assert unrelated.is_published is True
     assert unrelated.is_available is False
     assert unrelated.sort_order == 33
+
+
+async def test_recovery_restores_missing_physical_file_without_duplicate_rows(
+    db_session: AsyncSession,
+    tmp_path: Path,
+) -> None:
+    assets = tmp_path / "assets"
+    media = tmp_path / "media"
+    settings = _settings(media)
+    _write_assets(assets)
+
+    initial = await import_initial_catalog(db_session, assets_root=assets, settings=settings)
+    assert initial.ok
+
+    dessert = await db_session.scalar(select(Dessert).where(Dessert.slug == "shokoladno-kokosovyy-bounty"))
+    assert dessert is not None
+    image = await db_session.scalar(
+        select(DessertImage)
+        .where(DessertImage.dessert_id == dessert.id, DessertImage.original_filename == "shokoladno-kokosovyy-bounty-cover.png")
+    )
+    assert image is not None
+    image_path = media / image.storage_key
+    image_path.unlink()
+    assert not image_path.exists()
+
+    before_count = await db_session.scalar(select(func.count()).select_from(DessertImage))
+    summary = await recover_initial_catalog_media(db_session, assets_root=assets, settings=settings)
+
+    assert summary.ok
+    assert f"{dessert.slug}:{image.original_filename}" in summary.restored
+    assert image_path.exists()
+    after_count = await db_session.scalar(select(func.count()).select_from(DessertImage))
+    assert before_count == after_count
+
+
+async def test_recovery_skips_present_files_and_is_idempotent(
+    db_session: AsyncSession,
+    tmp_path: Path,
+) -> None:
+    assets = tmp_path / "assets"
+    media = tmp_path / "media"
+    settings = _settings(media)
+    _write_assets(assets)
+
+    initial = await import_initial_catalog(db_session, assets_root=assets, settings=settings)
+    assert initial.ok
+
+    dessert = await db_session.scalar(select(Dessert).where(Dessert.slug == "medovik"))
+    assert dessert is not None
+    image = await db_session.scalar(
+        select(DessertImage)
+        .where(DessertImage.dessert_id == dessert.id, DessertImage.original_filename == "medovik-cover.png")
+    )
+    assert image is not None
+
+    first = await recover_initial_catalog_media(db_session, assets_root=assets, settings=settings)
+    second = await recover_initial_catalog_media(db_session, assets_root=assets, settings=settings)
+
+    label = f"{dessert.slug}:{image.original_filename} present"
+    assert first.ok
+    assert second.ok
+    assert label in first.skipped
+    assert label in second.skipped
+    assert await db_session.scalar(select(func.count()).select_from(DessertImage)) == sum(
+        2 if spec.slug != "krasnyy-barkhat" else 1 for spec in CATALOG
+    )
+
+
+async def test_recovery_dry_run_and_optional_missing_detail_warn_only(
+    db_session: AsyncSession,
+    tmp_path: Path,
+) -> None:
+    assets = tmp_path / "assets"
+    media = tmp_path / "media"
+    settings = _settings(media)
+    _write_assets(assets)
+
+    initial = await import_initial_catalog(db_session, assets_root=assets, settings=settings)
+    assert initial.ok
+
+    dessert = await db_session.scalar(select(Dessert).where(Dessert.slug == "krasnyy-barkhat"))
+    assert dessert is not None
+    image = await db_session.scalar(select(DessertImage).where(DessertImage.dessert_id == dessert.id))
+    assert image is not None
+    image_path = media / image.storage_key
+    image_path.unlink()
+
+    summary = await recover_initial_catalog_media(db_session, assets_root=assets, settings=settings, dry_run=True)
+
+    assert summary.ok
+    assert f"{dessert.slug}:{image.original_filename}" in summary.restored
+    assert not image_path.exists()
+    assert any("krasnyy-barkhat: missing optional detail image" in warning for warning in summary.warnings)
