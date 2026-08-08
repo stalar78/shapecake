@@ -1,7 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getPublicDessert, getPublicReviews } from "@cake-and-shape/api-client";
+import { getPublicDessert, getPublicReviews, getPublicSiteSettings } from "@cake-and-shape/api-client";
+import { PublicFooter } from "../../components/PublicFooter";
+import { PublicHeader } from "../../components/PublicHeader";
+import { formatPrice } from "../../components/format";
 import { InquiryForm } from "../../InquiryForm";
 import { absoluteMediaUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
 
@@ -45,89 +48,107 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
   if (!dessert) {
     notFound();
   }
-  const reviews = await getPublicReviews(apiBaseUrl, { dessert_id: dessert.id, limit: 6 }).catch(() => null);
+  const [reviews, settings] = await Promise.all([
+    getPublicReviews(apiBaseUrl, { dessert_id: dessert.id, limit: 6 }).catch(() => null),
+    getPublicSiteSettings(apiBaseUrl).catch(() => null),
+  ]);
 
   return (
-    <main className="mx-auto grid min-h-screen w-full max-w-5xl gap-8 px-6 py-10 lg:grid-cols-[1fr_0.9fr]">
-      {dessert.is_available ? (
-        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(dessertJsonLd(dessert))} />
-      ) : null}
-      <section className="space-y-4">
-        <Link className="text-sm font-semibold text-stone-600" href="/">
-          Back to catalog
-        </Link>
-        {dessert.images[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            alt={dessert.images[0].alt_text || dessert.name}
-            className="h-[30rem] w-full rounded-3xl object-cover"
-            src={`${apiBaseUrl.replace("/api", "")}${dessert.images[0].url}`}
-          />
-        ) : (
-          <div className="flex h-[30rem] items-center justify-center rounded-3xl bg-stone-100 text-stone-500">
-            No image
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">
-          {dessert.category_slug}
-        </p>
-        <h1 className="mt-3 text-4xl font-semibold text-stone-950">{dessert.name}</h1>
-        <p className="mt-4 text-stone-700">{dessert.full_description || dessert.short_description}</p>
-        {!dessert.is_available ? <p className="mt-4 font-semibold text-amber-700">Currently unavailable</p> : null}
-
-        <h2 className="mt-8 text-lg font-semibold text-stone-950">Variants</h2>
-        <div className="mt-3 grid gap-3">
-          {dessert.variants.map((variant) => (
-            <div className="rounded-2xl border border-stone-200 p-4" key={variant.id}>
-              <p className="font-semibold">
-                {variant.weight_value} {variant.weight_unit}
-              </p>
-              <p>{formatPrice(variant.price)}</p>
-              {!variant.is_available ? <p className="text-sm text-amber-700">Variant unavailable</p> : null}
+    <>
+      <PublicHeader />
+      <main>
+        {dessert.is_available ? (
+          <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(dessertJsonLd(dessert))} />
+        ) : null}
+        <section className="public-shell grid gap-10 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+          <div className="grid gap-4">
+            <Link className="quiet-link w-fit" href="/">
+              Назад к каталогу
+            </Link>
+            <div className="image-zoom editorial-card aspect-[4/5] overflow-hidden bg-[var(--blush)] p-2">
+              {dessert.images[0] ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={dessert.images[0].alt_text || dessert.name}
+                  className="h-full w-full object-cover"
+                  src={`${apiBaseUrl.replace("/api", "")}${dessert.images[0].url}`}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-[var(--muted)]">Фото появится позже</div>
+              )}
             </div>
-          ))}
-        </div>
+            {dessert.images.length > 1 ? (
+              <div className="grid grid-cols-3 gap-3">
+                {dessert.images.slice(1, 4).map((image) => (
+                  <div className="aspect-square overflow-hidden border border-[var(--line)] bg-[var(--blush)]" key={image.id}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt={image.alt_text || dessert.name} className="h-full w-full object-cover" src={`${apiBaseUrl.replace("/api", "")}${image.url}`} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
 
-        <dl className="mt-8 grid gap-3 text-sm text-stone-700">
-          <div>
-            <dt className="font-semibold text-stone-950">Ingredients</dt>
-            <dd>{dessert.ingredients || "Not specified"}</dd>
+          <article className="self-start">
+            <p className="eyebrow">{dessert.category_slug}</p>
+            <h1 className="display mt-4 text-6xl font-semibold leading-[0.9] md:text-7xl">{dessert.name}</h1>
+            <p className="mt-6 text-lg leading-8 text-[var(--muted)]">{dessert.full_description || dessert.short_description || "Описание скоро появится."}</p>
+            {!dessert.is_available ? <p className="mt-6 font-bold text-[var(--primary-strong)]">Сейчас десерт недоступен для заказа</p> : null}
+
+            <section className="mt-10 border-t border-[var(--line)] pt-7">
+              <h2 className="display text-4xl font-semibold">Варианты</h2>
+              <div className="mt-5 grid gap-3">
+                {dessert.variants.map((variant) => (
+                  <div className="grid grid-cols-[1fr_auto] gap-4 border-b border-[var(--line)] py-4" key={variant.id}>
+                    <p className="font-bold">
+                      {variant.weight_value} {variant.weight_unit}
+                    </p>
+                    <p className="text-[var(--muted)]">{formatPrice(variant.price)}</p>
+                    {!variant.is_available ? <p className="col-span-2 text-sm text-[var(--primary-strong)]">Вариант временно недоступен</p> : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <dl className="mt-10 grid gap-5 border-t border-[var(--line)] pt-7 text-sm text-[var(--muted)]">
+              <div>
+                <dt className="font-bold text-[var(--foreground)]">Состав</dt>
+                <dd className="mt-2 whitespace-pre-wrap">{dessert.ingredients || "Не указан"}</dd>
+              </div>
+              <div>
+                <dt className="font-bold text-[var(--foreground)]">Аллергены</dt>
+                <dd className="mt-2 whitespace-pre-wrap">{dessert.allergens || "Не указаны"}</dd>
+              </div>
+              {dessert.warnings ? (
+                <div>
+                  <dt className="font-bold text-[var(--foreground)]">Важно</dt>
+                  <dd className="mt-2 whitespace-pre-wrap">{dessert.warnings}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </article>
+        </section>
+
+        <section className="public-shell section-rule py-14">
+          <h2 className="display text-5xl font-semibold">Отзывы о {dessert.name}</h2>
+          {!reviews ? <p className="mt-5 text-sm text-[var(--primary-strong)]">Отзывы временно недоступны.</p> : null}
+          {reviews && reviews.items.length === 0 ? <p className="mt-5 text-[var(--muted)]">Пока нет опубликованных отзывов об этом десерте.</p> : null}
+          <div className="mt-8 grid gap-5 md:grid-cols-2">
+            {reviews?.items.map((review) => (
+              <article className="editorial-card bg-[var(--surface-strong)] p-6" key={review.id}>
+                <p className="text-sm tracking-[0.22em] text-[var(--primary-strong)]">{"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}</p>
+                <blockquote className="display mt-4 text-3xl leading-tight">“{review.text}”</blockquote>
+                <p className="mt-4 text-sm font-bold">{review.author_name}</p>
+              </article>
+            ))}
           </div>
-          <div>
-            <dt className="font-semibold text-stone-950">Allergens</dt>
-            <dd>{dessert.allergens || "Not specified"}</dd>
-          </div>
-        </dl>
-        <div className="mt-8">
+        </section>
+
+        <section className="public-shell py-12">
           <InquiryForm apiBaseUrl={apiBaseUrl} dessert={dessert} />
-        </div>
-      </section>
-
-      <section className="lg:col-span-2 rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
-        <h2 className="text-2xl font-semibold text-stone-950">Reviews for {dessert.name}</h2>
-        {!reviews ? <p className="mt-3 text-sm text-amber-800">Reviews are unavailable right now.</p> : null}
-        {reviews && reviews.items.length === 0 ? <p className="mt-3 text-stone-600">No published reviews for this dessert yet.</p> : null}
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {reviews?.items.map((review) => (
-            <article className="rounded-2xl bg-stone-50 p-5" key={review.id}>
-              <p className="sr-only">{review.rating} out of 5 stars</p>
-              <p aria-hidden="true" className="font-semibold text-amber-700">
-                {"★".repeat(review.rating)}
-                {"☆".repeat(5 - review.rating)}
-              </p>
-              <blockquote className="mt-2 text-stone-700">“{review.text}”</blockquote>
-              <p className="mt-3 text-sm font-semibold text-stone-950">{review.author_name}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
+      <PublicFooter settings={settings} />
+    </>
   );
-}
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price / 100);
 }

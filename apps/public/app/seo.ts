@@ -6,7 +6,7 @@ import type {
 } from "@cake-and-shape/api-client";
 
 export const siteName = "Cake & Shape";
-export const defaultDescription = "Custom cakes and desserts for memorable celebrations.";
+export const defaultDescription = "Авторские торты и десерты ручной работы для красивых моментов.";
 export const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
 export function publicOrigin(): URL {
@@ -71,11 +71,11 @@ export function dessertJsonLd(dessert: PublicDessertDetail): Record<string, unkn
 }
 
 export function dessertDescription(dessert: PublicDessertSummary | PublicDessertDetail): string {
-  return dessert.short_description || `Custom ${dessert.name} from ${siteName}.`;
+  return dessert.short_description || `Авторский десерт ${dessert.name} от ${siteName}.`;
 }
 
 export function promotionDescription(promotion: PublicPromotion): string {
-  return promotion.summary || promotion.body || `Active Cake & Shape promotion: ${promotion.title}.`;
+  return promotion.summary || promotion.body || `Активное предложение Cake & Shape: ${promotion.title}.`;
 }
 
 function compact<T extends Record<string, unknown>>(value: T): T {
