@@ -9,7 +9,7 @@ export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
           <p className="eyebrow">Cake & Shape</p>
           <h2 className="display mt-3 text-4xl font-semibold">Десерты с настроением ручной работы.</h2>
           <p className="mt-4 max-w-md text-sm leading-7 text-[var(--muted)]">
-            Контакты, часы работы и условия берутся из настроек сайта. Если поле еще не заполнено, мы показываем спокойное состояние без выдуманных деталей.
+            Авторские десерты для праздников, встреч и личных поводов. Связаться с Cake &amp; Shape можно удобным способом ниже.
           </p>
         </div>
         <dl className="grid gap-4 text-sm">

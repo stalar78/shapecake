@@ -63,7 +63,7 @@ export default async function Home({
 
         <section className="public-shell grid min-h-[calc(100vh-5rem)] items-center gap-12 py-14 lg:grid-cols-[1.02fr_0.98fr] lg:py-20">
           <div>
-            <p className="eyebrow">Editorial patisserie</p>
+            <p className="eyebrow">Авторская кондитерская</p>
             <h1 className="display mt-5 max-w-4xl text-6xl font-semibold leading-[0.9] md:text-8xl">
               {settings?.hero_title || "Десерты для красивых моментов"}
             </h1>
@@ -91,7 +91,7 @@ export default async function Home({
                 />
               ) : (
                 <div className="flex h-full items-center justify-center px-8 text-center text-[var(--muted)]">
-                  Когда появятся реальные фото десертов, здесь будет главный визуальный акцент.
+                  Фотография десерта скоро появится.
                 </div>
               )}
             </div>
@@ -139,7 +139,7 @@ export default async function Home({
 
           {!catalog ? (
             <p className="editorial-card mt-10 p-6 text-sm text-[var(--primary-strong)]">
-              Каталог временно недоступен. Попробуйте открыть страницу после запуска API.
+              Каталог временно недоступен. Пожалуйста, попробуйте открыть страницу чуть позже.
             </p>
           ) : null}
           {catalog && catalog.items.length === 0 ? (
@@ -156,7 +156,7 @@ export default async function Home({
               <p className="eyebrow">Ремесло</p>
               <h2 className="display mt-3 text-5xl font-semibold leading-none">Тихая роскошь ручной работы</h2>
               <p className="mt-5 text-base leading-8 text-[var(--muted)]">
-                Мы не добавляем выдуманные факты: этот блок работает как брендовая пауза и опирается на реальные настройки и каталог.
+                В центре Cake &amp; Shape — сам десерт: вкус, аккуратная подача и внимание к деталям. Каталог помогает выбрать основу, а пожелания к событию можно обсудить в заявке.
               </p>
             </div>
             <div id="about" className="editorial-card bg-[var(--surface)] p-8">
@@ -165,7 +165,7 @@ export default async function Home({
                 {settings?.about_master_title || "О мастере"}
               </h2>
               <p className="mt-5 whitespace-pre-wrap text-base leading-8 text-[var(--muted)]">
-                {settings?.about_master_text || "Расскажите о подходе мастера в настройках сайта."}
+                {settings?.about_master_text || "Здесь появится рассказ о подходе мастера к десертам и заказам."}
               </p>
             </div>
           </div>
@@ -235,7 +235,7 @@ export default async function Home({
           ].map(([title, text]) => (
             <article className="border-t border-[var(--line)] pt-5" key={title}>
               <h2 className="display text-3xl font-semibold">{title}</h2>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{text || "Информация появится после заполнения настроек."}</p>
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{text || "Подробности можно уточнить при оформлении запроса."}</p>
             </article>
           ))}
         </section>

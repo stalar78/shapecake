@@ -118,7 +118,7 @@ export function InquiryForm({ apiBaseUrl, categories = [], desserts = [], desser
                   }}
                 >
                   <option value="">Можно не выбирать</option>
-                  {categories.length ? <option disabled>Опубликованные десерты</option> : null}
+                  {categories.length ? <option disabled>Доступные десерты</option> : null}
                   {desserts.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}
