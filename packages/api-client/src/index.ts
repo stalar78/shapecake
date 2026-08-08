@@ -422,7 +422,7 @@ export class AdminApi {
 
   constructor(baseUrl: string, fetcher: Fetcher = fetch) {
     this.baseUrl = baseUrl
-    this.fetcher = fetcher
+    this.fetcher = (input, init) => fetcher(input, init)
   }
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
