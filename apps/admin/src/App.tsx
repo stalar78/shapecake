@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   AdminApi,
+  ApiError,
   type AdminOverview,
   type AdminCategory,
   type AdminDessert,
@@ -36,7 +37,10 @@ function App() {
   const [inquirySearch, setInquirySearch] = useState('')
   const [inquiryOffset, setInquiryOffset] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [workspaceError, setWorkspaceError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -44,11 +48,19 @@ function App() {
       try {
         const restored = await api.me()
         if (!cancelled) {
+          setAuthError('')
           setUser(restored)
-          await loadWorkspace()
+          await bootstrapWorkspace()
         }
-      } catch {
-        // Login form is shown below.
+      } catch (error) {
+        if (cancelled) {
+          return
+        }
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          resetWorkspaceState()
+          return
+        }
+        setAuthError(describeError(error, 'Could not restore the admin session.'))
       } finally {
         if (!cancelled) {
           setLoading(false)
@@ -107,32 +119,21 @@ function App() {
     await Promise.all([loadCatalog(), loadInquiries(), loadContent()])
   }
 
-  async function run(action: () => Promise<void>, success: string) {
-    setMessage('')
+  async function bootstrapWorkspace() {
+    setWorkspaceLoading(true)
+    setWorkspaceError('')
     try {
-      await action()
       await loadWorkspace()
-      setMessage(success)
+      return true
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Request failed')
+      setWorkspaceError(describeError(error, 'Workspace data failed to load.'))
+      return false
+    } finally {
+      setWorkspaceLoading(false)
     }
   }
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    try {
-      const loggedIn = await api.login(form.get('email'), form.get('password'))
-      setUser(loggedIn)
-      await loadWorkspace()
-      setMessage('')
-    } catch {
-      setMessage('Login failed. Check the email and password.')
-    }
-  }
-
-  async function handleLogout() {
-    await api.logout()
+  function resetWorkspaceState() {
     setUser(null)
     setCategories([])
     setDesserts([])
@@ -144,7 +145,47 @@ function App() {
     setSettings(null)
     setOverview(null)
     setInquiries([])
+    setInquiryTotal(0)
     setSelectedInquiry(null)
+    setWorkspaceLoading(false)
+    setWorkspaceError('')
+  }
+
+  async function run(action: () => Promise<void>, success: string) {
+    setMessage('')
+    try {
+      await action()
+      await bootstrapWorkspace()
+      setMessage(success)
+    } catch (error) {
+      setMessage(describeError(error, 'Request failed.'))
+    }
+  }
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    setAuthError('')
+    setWorkspaceError('')
+    setMessage('')
+    try {
+      const loggedIn = await api.login(form.get('email'), form.get('password'))
+      setUser(loggedIn)
+      await bootstrapWorkspace()
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 400 || error.status === 401 || error.status === 403)) {
+        setAuthError('Login failed. Check the email and password.')
+        return
+      }
+      setAuthError(describeError(error, 'Login failed.'))
+    }
+  }
+
+  async function handleLogout() {
+    await api.logout()
+    setMessage('')
+    setAuthError('')
+    resetWorkspaceState()
   }
 
   if (loading) {
@@ -166,7 +207,7 @@ function App() {
             <input name="password" type="password" autoComplete="current-password" required />
           </label>
           <button type="submit">Sign in</button>
-          {message ? <p className="error">{message}</p> : null}
+          {authError ? <p className="error">{authError}</p> : null}
         </form>
       </main>
     )
@@ -184,6 +225,8 @@ function App() {
         </button>
       </header>
 
+      {workspaceLoading ? <p className="muted">Loading workspace...</p> : null}
+      {workspaceError ? <p className="error">{workspaceError}</p> : null}
       {message ? <p className={message.includes('failed') || message.includes('detail') ? 'error' : 'success'}>{message}</p> : null}
 
       <section className="admin-grid">
@@ -1258,6 +1301,16 @@ function moveOrder(items: Array<{ id: number }>, from: number, to: number) {
 
 function itemIndex(items: Array<{ id: number }>, id: number) {
   return items.findIndex((item) => item.id === id)
+}
+
+function describeError(error: unknown, fallback: string) {
+  if (error instanceof ApiError) {
+    return error.message || fallback
+  }
+  if (error instanceof Error) {
+    return error.message || fallback
+  }
+  return fallback
 }
 
 export default App
