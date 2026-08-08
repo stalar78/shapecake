@@ -28,10 +28,9 @@ if ! docker volume inspect "$volume_name" >/dev/null 2>&1; then
 fi
 
 echo "Creating media backup from Docker volume: $volume_name"
-if docker run --rm \
+if MSYS_NO_PATHCONV=1 docker run --rm \
   -v "$volume_name:/media:ro" \
-  -v "$BACKUP_DIR:/backup" \
-  busybox sh -eu -c 'tar -czf "/backup/'"$(basename "$tmp_file")"'" -C /media .'; then
+  busybox tar -czf - -C /media . > "$tmp_file"; then
   mv "$tmp_file" "$archive_file"
   echo "Media backup complete: $archive_file"
 else

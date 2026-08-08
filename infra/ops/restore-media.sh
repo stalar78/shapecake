@@ -25,18 +25,10 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 
-case "$ARCHIVE_FILE" in
-  /*) archive_abs="$ARCHIVE_FILE" ;;
-  *) archive_abs="$(pwd)/$ARCHIVE_FILE" ;;
-esac
-archive_dir=$(dirname "$archive_abs")
-archive_name=$(basename "$archive_abs")
-
 echo "Validating media archive paths"
-docker run --rm \
-  -v "$archive_dir:/backup:ro" \
+MSYS_NO_PATHCONV=1 docker run --rm -i \
   busybox sh -eu -c '
-    tar -tzf "/backup/'"$archive_name"'" | while IFS= read -r path; do
+    tar -tzf - | while IFS= read -r path; do
       case "$path" in
         "" | /* | ../* | */../* )
           echo "Unsafe archive path: $path" >&2
@@ -44,7 +36,7 @@ docker run --rm \
           ;;
       esac
     done
-  '
+  ' < "$ARCHIVE_FILE"
 
 project_name=${COMPOSE_PROJECT_NAME:-$(basename "$ROOT_DIR")}
 if [ "${ALLOW_MEDIA_REPLACE:-}" = "yes" ]; then
@@ -60,16 +52,15 @@ else
   echo "Restoring into verification media volume: $target_volume"
 fi
 
-docker run --rm \
+MSYS_NO_PATHCONV=1 docker run --rm -i \
   -v "$target_volume:/media" \
-  -v "$archive_dir:/backup:ro" \
   busybox sh -eu -c '
     if [ "'"${ALLOW_MEDIA_REPLACE:-}"'" = "yes" ]; then
       find /media -mindepth 1 -maxdepth 1 -exec rm -rf {} +
     fi
-    tar -xzf "/backup/'"$archive_name"'" -C /media
+    tar -xzf - -C /media
     find /media -maxdepth 2 -print | head -50
-  '
+  ' < "$ARCHIVE_FILE"
 
 if [ "${ALLOW_MEDIA_REPLACE:-}" = "yes" ]; then
   echo "Media restore complete: $target_volume"
