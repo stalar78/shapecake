@@ -8,6 +8,8 @@ import type {
 export const siteName = "Cake & Shape";
 export const defaultDescription = "Авторские торты и десерты ручной работы для красивых моментов.";
 export const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
+export const browserApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
+export const publicMediaOrigin = process.env.PUBLIC_MEDIA_ORIGIN ?? process.env.PUBLIC_SITE_ORIGIN ?? process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "http://localhost:3000";
 
 export function publicOrigin(): URL {
   const raw = process.env.PUBLIC_SITE_ORIGIN ?? process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "http://localhost:3000";
@@ -34,8 +36,20 @@ export function absoluteMediaUrl(path: string | null | undefined): string | unde
     const parsed = new URL(path);
     return ["http:", "https:"].includes(parsed.protocol) ? parsed.toString() : undefined;
   } catch {
-    const mediaOrigin = new URL(apiBaseUrl.replace(/\/api\/?$/, "/"));
+    const mediaOrigin = publicPresentationOrigin();
     return new URL(path, mediaOrigin).toString();
+  }
+}
+
+function publicPresentationOrigin(): URL {
+  try {
+    const parsed = new URL(publicMediaOrigin.trim());
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+      return publicOrigin();
+    }
+    return new URL(parsed.origin);
+  } catch {
+    return publicOrigin();
   }
 }
 
