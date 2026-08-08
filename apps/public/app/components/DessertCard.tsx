@@ -3,38 +3,32 @@ import type { PublicDessertSummary } from "@cake-and-shape/api-client";
 import { absoluteMediaUrl } from "../seo";
 import { formatPrice } from "./format";
 
-export function DessertCard({ dessert, priority = false }: { dessert: PublicDessertSummary; priority?: boolean }) {
+export function DessertCard({ dessert, priority = false, large = false }: { dessert: PublicDessertSummary; priority?: boolean; large?: boolean }) {
   return (
-    <Link className="group editorial-card block overflow-hidden bg-[var(--surface-strong)]" href={`/desserts/${dessert.slug}`}>
-      <div className="image-zoom aspect-[4/5] bg-[var(--blush)]">
+    <Link className="group block" href={`/desserts/${dessert.slug}`}>
+      <div className={`media-frame ${large ? "aspect-[4/5]" : "aspect-[4/5]"}`}>
         {dessert.primary_image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             alt={dessert.primary_image.alt_text || dessert.name}
-            className="h-full w-full object-cover"
             loading={priority ? "eager" : "lazy"}
             src={absoluteMediaUrl(dessert.primary_image.url) ?? ""}
           />
         ) : (
-          <div className="flex h-full items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
-            Фото появится позже
-          </div>
+          <div className="media-placeholder text-sm">Фото десерта скоро появится.</div>
         )}
       </div>
-      <div className="grid gap-4 p-5">
-        <div>
-          <p className="eyebrow">{dessert.category_slug}</p>
-          <h3 className="display mt-2 text-3xl font-semibold leading-none group-hover:text-[var(--primary-strong)]">
+      <div className="mt-4">
+        <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] pb-3">
+          <h3 className={`display font-semibold leading-none group-hover:text-[var(--primary-strong)] ${large ? "text-5xl" : "text-3xl"}`}>
             {dessert.name}
           </h3>
+          <span className="shrink-0 text-sm text-[var(--muted)]">от {formatPrice(dessert.variants[0]?.price)}</span>
         </div>
-        <p className="min-h-12 text-sm leading-6 text-[var(--muted)]">
+        <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
           {dessert.short_description || "Описание скоро появится в каталоге."}
         </p>
-        <div className="flex items-end justify-between gap-3 border-t border-[var(--line)] pt-4 text-sm">
-          <span className="text-[var(--muted)]">от {formatPrice(dessert.variants[0]?.price)}</span>
-          {!dessert.is_available ? <span className="font-bold text-[var(--primary-strong)]">недоступен</span> : null}
-        </div>
+        {!dessert.is_available ? <p className="mt-2 text-sm font-bold text-[var(--primary-strong)]">Сейчас недоступен для заказа</p> : null}
       </div>
     </Link>
   );
