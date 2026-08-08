@@ -18,6 +18,8 @@ import './index.css'
 const apiBaseUrl = import.meta.env.VITE_ADMIN_API_BASE_URL ?? 'http://localhost:8000/api'
 const api = new AdminApi(apiBaseUrl)
 
+type AdminSection = 'overview' | 'catalog' | 'inquiries' | 'reviews' | 'promotions' | 'site-settings'
+
 function App() {
   const [user, setUser] = useState<AdminUser | null>(null)
   const [categories, setCategories] = useState<AdminCategory[]>([])
@@ -36,6 +38,7 @@ function App() {
   const [inquiryChannelFilter, setInquiryChannelFilter] = useState('')
   const [inquirySearch, setInquirySearch] = useState('')
   const [inquiryOffset, setInquiryOffset] = useState(0)
+  const [activeSection, setActiveSection] = useState<AdminSection>('catalog')
   const [loading, setLoading] = useState(true)
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -215,77 +218,121 @@ function App() {
     )
   }
 
+  const sectionItems: Array<{ id: AdminSection; label: string; meta: string }> = [
+    { id: 'overview', label: 'Overview', meta: 'Status and recent activity' },
+    { id: 'catalog', label: 'Catalog', meta: `${desserts.length} desserts` },
+    { id: 'inquiries', label: 'Inquiries', meta: `${inquiryTotal} requests` },
+    { id: 'reviews', label: 'Reviews', meta: `${reviews.length} entries` },
+    { id: 'promotions', label: 'Promotions', meta: `${promotions.length} campaigns` },
+    { id: 'site-settings', label: 'Site settings', meta: 'Public business content' },
+  ]
+
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div>
-          <h1>Catalog Admin</h1>
+    <main className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <p className="eyebrow">Cake &amp; Shape</p>
+          <h1>Admin workspace</h1>
           <p className="muted">Signed in as {user.email}</p>
         </div>
-        <button type="button" className="secondary" onClick={handleLogout}>
+
+        <nav className="sidebar-nav" aria-label="Admin sections">
+          {sectionItems.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              className={`nav-item ${activeSection === section.id ? 'active' : ''}`}
+              onClick={() => setActiveSection(section.id)}
+            >
+              <span>{section.label}</span>
+              <small>{section.meta}</small>
+            </button>
+          ))}
+        </nav>
+
+        <button type="button" className="secondary sidebar-logout" onClick={handleLogout}>
           Log out
         </button>
-      </header>
+      </aside>
 
-      {workspaceLoading ? <p className="muted">Loading workspace...</p> : null}
-      {workspaceError ? <p className="error">{workspaceError}</p> : null}
-      {message ? <p className={message.includes('failed') || message.includes('detail') ? 'error' : 'success'}>{message}</p> : null}
+      <section className="workspace-shell">
+        <header className="workspace-header">
+          <div>
+            <p className="eyebrow">Operational workspace</p>
+            <h2>{sectionTitle(activeSection)}</h2>
+          </div>
+          <div className="workspace-status">
+            {workspaceLoading ? <p className="muted">Loading workspace...</p> : null}
+            {workspaceError ? <p className="error">{workspaceError}</p> : null}
+            {message ? (
+              <p className={message.includes('failed') || message.includes('detail') ? 'error' : 'success'}>{message}</p>
+            ) : null}
+          </div>
+        </header>
 
-      <section className="admin-grid">
-        <OverviewPanel overview={overview} />
-        {settings ? <SettingsPanel settings={settings} run={run} /> : null}
-        <CategoryPanel categories={categories} run={run} />
-        <DessertPanel
-          categories={categories.filter((category) => !category.archived_at)}
-          desserts={desserts}
-          selectedDessert={selectedDessert}
-          setSelectedDessert={setSelectedDessert}
-          run={run}
-        />
-        <InquiryPanel
-          inquiries={inquiries}
-          total={inquiryTotal}
-          offset={inquiryOffset}
-          statusFilter={inquiryStatusFilter}
-          channelFilter={inquiryChannelFilter}
-          search={inquirySearch}
-          selectedInquiry={selectedInquiry}
-          setSelectedInquiry={setSelectedInquiry}
-          setStatusFilter={(value) => {
-            setInquiryStatusFilter(value)
-            setInquiryOffset(0)
-            void loadInquiries(value, 0, inquiryChannelFilter, inquirySearch)
-          }}
-          setChannelFilter={(value) => {
-            setInquiryChannelFilter(value)
-            setInquiryOffset(0)
-            void loadInquiries(inquiryStatusFilter, 0, value, inquirySearch)
-          }}
-          setSearch={(value) => {
-            setInquirySearch(value)
-            setInquiryOffset(0)
-            void loadInquiries(inquiryStatusFilter, 0, inquiryChannelFilter, value)
-          }}
-          page={(nextOffset) => {
-            setInquiryOffset(nextOffset)
-            void loadInquiries(inquiryStatusFilter, nextOffset, inquiryChannelFilter, inquirySearch)
-          }}
-          run={run}
-        />
-        <ReviewPanel
-          desserts={desserts}
-          reviews={reviews}
-          selectedReview={selectedReview}
-          setSelectedReview={setSelectedReview}
-          run={run}
-        />
-        <PromotionPanel
-          desserts={desserts}
-          promotions={promotions}
-          selectedPromotion={selectedPromotion}
-          setSelectedPromotion={setSelectedPromotion}
-          run={run}
-        />
+        <div className="workspace-content">
+          {activeSection === 'overview' ? <OverviewPanel overview={overview} /> : null}
+          {activeSection === 'catalog' ? (
+            <DessertPanel
+              categories={categories.filter((category) => !category.archived_at)}
+              desserts={desserts}
+              selectedDessert={selectedDessert}
+              setSelectedDessert={setSelectedDessert}
+              run={run}
+            />
+          ) : null}
+          {activeSection === 'inquiries' ? (
+            <InquiryPanel
+              inquiries={inquiries}
+              total={inquiryTotal}
+              offset={inquiryOffset}
+              statusFilter={inquiryStatusFilter}
+              channelFilter={inquiryChannelFilter}
+              search={inquirySearch}
+              selectedInquiry={selectedInquiry}
+              setSelectedInquiry={setSelectedInquiry}
+              setStatusFilter={(value) => {
+                setInquiryStatusFilter(value)
+                setInquiryOffset(0)
+                void loadInquiries(value, 0, inquiryChannelFilter, inquirySearch)
+              }}
+              setChannelFilter={(value) => {
+                setInquiryChannelFilter(value)
+                setInquiryOffset(0)
+                void loadInquiries(inquiryStatusFilter, 0, value, inquirySearch)
+              }}
+              setSearch={(value) => {
+                setInquirySearch(value)
+                setInquiryOffset(0)
+                void loadInquiries(inquiryStatusFilter, 0, inquiryChannelFilter, value)
+              }}
+              page={(nextOffset) => {
+                setInquiryOffset(nextOffset)
+                void loadInquiries(inquiryStatusFilter, nextOffset, inquiryChannelFilter, inquirySearch)
+              }}
+              run={run}
+            />
+          ) : null}
+          {activeSection === 'reviews' ? (
+            <ReviewPanel
+              desserts={desserts}
+              reviews={reviews}
+              selectedReview={selectedReview}
+              setSelectedReview={setSelectedReview}
+              run={run}
+            />
+          ) : null}
+          {activeSection === 'promotions' ? (
+            <PromotionPanel
+              desserts={desserts}
+              promotions={promotions}
+              selectedPromotion={selectedPromotion}
+              setSelectedPromotion={setSelectedPromotion}
+              run={run}
+            />
+          ) : null}
+          {activeSection === 'site-settings' && settings ? <SettingsPanel settings={settings} run={run} /> : null}
+        </div>
       </section>
     </main>
   )
@@ -860,8 +907,11 @@ function CategoryPanel({
   run: (action: () => Promise<void>, success: string) => Promise<void>
 }) {
   return (
-    <section className="card stack">
-      <h2>Categories</h2>
+    <section className="subcard stack">
+      <div>
+        <h3>Categories</h3>
+        <p className="muted">Secondary catalog structure and visibility controls.</p>
+      </div>
       <form
         className="form"
         onSubmit={(event) => {
@@ -926,89 +976,134 @@ function DessertPanel({
   setSelectedDessert: (dessert: AdminDessert | null) => void
   run: (action: () => Promise<void>, success: string) => Promise<void>
 }) {
+  const [search, setSearch] = useState('')
+  const visibleDesserts = desserts.filter((dessert) => {
+    const query = search.trim().toLowerCase()
+    const categoryName = categories.find((category) => category.id === dessert.category_id)?.name.toLowerCase() ?? ''
+    if (!query) {
+      return true
+    }
+    return dessert.name.toLowerCase().includes(query) || dessert.slug.toLowerCase().includes(query) || categoryName.includes(query)
+  })
+
   return (
-    <section className="card stack">
-      <h2>Desserts</h2>
-      <form
-        className="form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const form = new FormData(event.currentTarget)
-          void run(
-            () =>
-              api.createDessert({
-                category_id: Number(form.get('category_id')),
-                name: String(form.get('name') ?? ''),
-                slug: String(form.get('slug') ?? ''),
-                short_description: String(form.get('short_description') ?? ''),
-              }).then(() => undefined),
-            'Dessert created.',
-          )
-          event.currentTarget.reset()
-        }}
-      >
-        <select name="category_id" required>
-          <option value="">Choose category</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <input name="name" placeholder="Dessert name" required />
-        <input name="slug" placeholder="dessert-slug" required />
-        <textarea name="short_description" placeholder="Short description" />
-        <button type="submit">Create dessert</button>
-      </form>
-
-      <div className="list">
-        {desserts.map((dessert) => (
-          <button className="row-button" type="button" key={dessert.id} onClick={() => setSelectedDessert(dessert)}>
-            {dessert.name}
-            <span>{dessert.is_published ? 'Published' : 'Draft'}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="inline-form">
-        {desserts.map((dessert, index) => (
-          <div className="row-actions" key={dessert.id}>
-            <span>{dessert.name}</span>
-            <button
-              type="button"
-              className="secondary"
-              disabled={index === 0}
-              onClick={() =>
-                void run(
-                  () => api.reorderDesserts(moveOrder(desserts, index, index - 1)).then(() => undefined),
-                  'Desserts reordered.',
-                )
-              }
-            >
-              Up
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={index === desserts.length - 1}
-              onClick={() =>
-                void run(
-                  () => api.reorderDesserts(moveOrder(desserts, index, index + 1)).then(() => undefined),
-                  'Desserts reordered.',
-                )
-              }
-            >
-              Down
-            </button>
+    <section className="catalog-workspace">
+      <aside className="card catalog-sidebar stack">
+        <div className="section-heading">
+          <div>
+            <h2>Desserts</h2>
+            <p className="muted">{desserts.length} total in catalog</p>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {selectedDessert ? (
-        <DessertEditor dessert={selectedDessert} categories={categories} run={run} />
-      ) : (
-        <p className="muted">Create or select a dessert to manage variants and images.</p>
-      )}
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.currentTarget.value)}
+          placeholder="Search by name, slug, or category"
+        />
+
+        <form
+          className="form subcard"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
+            void run(
+              () =>
+                api.createDessert({
+                  category_id: Number(form.get('category_id')),
+                  name: String(form.get('name') ?? ''),
+                  slug: String(form.get('slug') ?? ''),
+                  short_description: String(form.get('short_description') ?? ''),
+                }).then(() => undefined),
+              'Dessert created.',
+            )
+            event.currentTarget.reset()
+          }}
+        >
+          <div className="section-heading">
+            <strong>Create dessert</strong>
+          </div>
+          <select name="category_id" required>
+            <option value="">Choose category</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input name="name" placeholder="Dessert name" required />
+          <input name="slug" placeholder="dessert-slug" required />
+          <textarea name="short_description" placeholder="Short description" />
+          <button type="submit">Create dessert</button>
+        </form>
+
+        <div className="catalog-list">
+          {visibleDesserts.map((dessert) => {
+            const currentIndex = itemIndex(desserts, dessert.id)
+            return (
+            <article
+              className={`catalog-row ${selectedDessert?.id === dessert.id ? 'selected' : ''}`}
+              key={dessert.id}
+            >
+              <button type="button" className="catalog-select" onClick={() => setSelectedDessert(dessert)}>
+                <span className="catalog-name">{dessert.name}</span>
+                <span className="catalog-meta">{dessert.slug}</span>
+                <div className="badge-row">
+                  <StatusBadge tone={dessert.is_published ? 'published' : 'draft'}>
+                    {dessert.is_published ? 'Published' : 'Draft'}
+                  </StatusBadge>
+                  <StatusBadge tone={dessert.is_available ? 'available' : 'muted'}>
+                    {dessert.is_available ? 'Available' : 'Unavailable'}
+                  </StatusBadge>
+                </div>
+              </button>
+              <div className="row-actions compact">
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={currentIndex === 0}
+                  onClick={() =>
+                    void run(
+                      () => api.reorderDesserts(moveOrder(desserts, currentIndex, currentIndex - 1)).then(() => undefined),
+                      'Desserts reordered.',
+                    )
+                  }
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={currentIndex === desserts.length - 1}
+                  onClick={() =>
+                    void run(
+                      () => api.reorderDesserts(moveOrder(desserts, currentIndex, currentIndex + 1)).then(() => undefined),
+                      'Desserts reordered.',
+                    )
+                  }
+                >
+                  Down
+                </button>
+              </div>
+            </article>
+            )
+          })}
+          {visibleDesserts.length === 0 ? <p className="muted">No desserts match this search.</p> : null}
+        </div>
+
+        <CategoryPanel categories={categories} run={run} />
+      </aside>
+
+      <div className="catalog-detail">
+        {selectedDessert ? (
+          <DessertEditor dessert={selectedDessert} categories={categories} run={run} />
+        ) : (
+          <section className="card empty-state">
+            <h3>Select a dessert</h3>
+            <p className="muted">Open a dessert from the list to edit content, variants, images, and merchandising flags.</p>
+          </section>
+        )}
+      </div>
     </section>
   )
 }
@@ -1023,198 +1118,362 @@ function DessertEditor({
   run: (action: () => Promise<void>, success: string) => Promise<void>
 }) {
   return (
-    <section className="editor stack">
-      <h3>{dessert.name}</h3>
-      <div className="toggles">
-        {(['is_published', 'is_available', 'is_new', 'is_popular', 'is_seasonal', 'is_bento'] as const).map((field) => (
-          <label key={field}>
-            {field.replaceAll('_', ' ')}
-            <input
-              type="checkbox"
-              checked={Boolean(dessert[field])}
-              onChange={(event) =>
-                void run(
-                  () => api.updateDessert(dessert.id, { [field]: event.currentTarget.checked }).then(() => undefined),
-                  'Dessert updated.',
-                )
-              }
-            />
-          </label>
-        ))}
+    <section className="card editor stack">
+      <div className="detail-header">
+        <div>
+          <p className="eyebrow">Catalog editor</p>
+          <h3>{dessert.name}</h3>
+          <p className="muted">/{dessert.slug}</p>
+        </div>
+        <div className="detail-header-actions">
+          <StatusBadge tone={dessert.is_published ? 'published' : 'draft'}>
+            {dessert.is_published ? 'Published' : 'Draft'}
+          </StatusBadge>
+          <StatusBadge tone={dessert.is_available ? 'available' : 'muted'}>
+            {dessert.is_available ? 'Available' : 'Unavailable'}
+          </StatusBadge>
+          <button
+            type="button"
+            onClick={() =>
+              void run(
+                () => api.updateDessert(dessert.id, { is_published: !dessert.is_published }).then(() => undefined),
+                dessert.is_published ? 'Dessert unpublished.' : 'Dessert published.',
+              )
+            }
+          >
+            {dessert.is_published ? 'Unpublish' : 'Publish'}
+          </button>
+          <button
+            type="button"
+            className="secondary danger"
+            onClick={() => void run(() => api.archiveDessert(dessert.id).then(() => undefined), 'Dessert archived.')}
+          >
+            Archive
+          </button>
+        </div>
       </div>
-      <label>
-        Category
-        <select
-          value={dessert.category_id}
-          onChange={(event) =>
+
+      <section className="subcard stack">
+        <div>
+          <h4>Basic information</h4>
+          <p className="muted">Core identity, category, descriptions, and preparation note.</p>
+        </div>
+        <form
+          className="form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
             void run(
-              () => api.updateDessert(dessert.id, { category_id: Number(event.currentTarget.value) }).then(() => undefined),
-              'Dessert category updated.',
+              () =>
+                api.updateDessert(dessert.id, {
+                  category_id: Number(form.get('category_id')),
+                  name: String(form.get('name') ?? ''),
+                  slug: String(form.get('slug') ?? ''),
+                  short_description: String(form.get('short_description') ?? ''),
+                  full_description: String(form.get('full_description') ?? ''),
+                  preparation_time_text: String(form.get('preparation_time_text') ?? ''),
+                }).then(() => undefined),
+              'Basic information updated.',
             )
-          }
+          }}
         >
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
+          <div className="inline-form wide-inputs">
+            <label>
+              Category
+              <select name="category_id" defaultValue={String(dessert.category_id)}>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Name
+              <input name="name" defaultValue={dessert.name} required />
+            </label>
+            <label>
+              Slug
+              <input name="slug" defaultValue={dessert.slug} required />
+            </label>
+          </div>
+          <label>
+            Short description
+            <textarea name="short_description" defaultValue={dessert.short_description} />
+          </label>
+          <label>
+            Full description
+            <textarea name="full_description" defaultValue={dessert.full_description} />
+          </label>
+          <label>
+            Preparation time
+            <input name="preparation_time_text" defaultValue={dessert.preparation_time_text} placeholder="e.g. 2 days" />
+          </label>
+          <button type="submit">Save basic information</button>
+        </form>
+      </section>
+
+      <section className="subcard stack">
+        <div>
+          <h4>Nutrition and composition</h4>
+          <p className="muted">Ingredients, warnings, allergens, and nutrition values.</p>
+        </div>
+        <form
+          className="form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
+            void run(
+              () =>
+                api.updateDessert(dessert.id, {
+                  ingredients: String(form.get('ingredients') ?? ''),
+                  allergens: String(form.get('allergens') ?? ''),
+                  warnings: String(form.get('warnings') ?? ''),
+                  calories: nullableNumber(form.get('calories')),
+                  proteins: nullableText(form.get('proteins')),
+                  fats: nullableText(form.get('fats')),
+                  carbohydrates: nullableText(form.get('carbohydrates')),
+                }).then(() => undefined),
+              'Nutrition and composition updated.',
+            )
+          }}
+        >
+          <div className="inline-form">
+            <label>
+              Calories
+              <input name="calories" type="number" min="0" defaultValue={dessert.calories ?? ''} />
+            </label>
+            <label>
+              Proteins
+              <input name="proteins" defaultValue={dessert.proteins ?? ''} />
+            </label>
+            <label>
+              Fats
+              <input name="fats" defaultValue={dessert.fats ?? ''} />
+            </label>
+            <label>
+              Carbohydrates
+              <input name="carbohydrates" defaultValue={dessert.carbohydrates ?? ''} />
+            </label>
+          </div>
+          <label>
+            Ingredients
+            <textarea name="ingredients" defaultValue={dessert.ingredients} />
+          </label>
+          <label>
+            Allergens
+            <textarea name="allergens" defaultValue={dessert.allergens} />
+          </label>
+          <label>
+            Warnings
+            <textarea name="warnings" defaultValue={dessert.warnings} />
+          </label>
+          <button type="submit">Save nutrition and composition</button>
+        </form>
+      </section>
+
+      <section className="subcard stack">
+        <div>
+          <h4>Variants and pricing</h4>
+          <p className="muted">Weight options, prices, and variant ordering.</p>
+        </div>
+        <form
+          className="inline-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
+            void run(
+              () =>
+                api.createVariant(dessert.id, {
+                  weight_value: String(form.get('weight_value') ?? '1'),
+                  weight_unit: form.get('weight_unit') as 'g' | 'kg' | 'pcs',
+                  price: Number(form.get('price')),
+                }).then(() => undefined),
+              'Variant added.',
+            )
+            event.currentTarget.reset()
+          }}
+        >
+          <input name="weight_value" placeholder="Weight value" required />
+          <select name="weight_unit" defaultValue="kg">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+            <option value="pcs">pcs</option>
+          </select>
+          <input name="price" type="number" placeholder="Price in kopecks" min="0" required />
+          <button type="submit">Add variant</button>
+        </form>
+
+        <div className="variant-list">
+          {dessert.variants.map((variant) => (
+            <article className="mini-card variant-card" key={variant.id}>
+              <div>
+                <strong>
+                  {variant.weight_value} {variant.weight_unit}
+                </strong>
+                <p className="muted">{formatPrice(variant.price)}</p>
+              </div>
+              <div className="row-actions compact">
+                <button type="button" className="secondary" onClick={() => void run(() => api.archiveVariant(dessert.id, variant.id).then(() => undefined), 'Variant archived.')}>
+                  Archive
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={itemIndex(dessert.variants, variant.id) === 0}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        api
+                          .reorderVariants(dessert.id, moveOrder(dessert.variants, itemIndex(dessert.variants, variant.id), itemIndex(dessert.variants, variant.id) - 1))
+                          .then(() => undefined),
+                      'Variants reordered.',
+                    )
+                  }
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={itemIndex(dessert.variants, variant.id) === dessert.variants.length - 1}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        api
+                          .reorderVariants(dessert.id, moveOrder(dessert.variants, itemIndex(dessert.variants, variant.id), itemIndex(dessert.variants, variant.id) + 1))
+                          .then(() => undefined),
+                      'Variants reordered.',
+                    )
+                  }
+                >
+                  Down
+                </button>
+              </div>
+            </article>
           ))}
-        </select>
-      </label>
+        </div>
+      </section>
 
-      <form
-        className="inline-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const form = new FormData(event.currentTarget)
-          void run(
-            () =>
-              api.createVariant(dessert.id, {
-                weight_value: String(form.get('weight_value') ?? '1'),
-                weight_unit: form.get('weight_unit') as 'g' | 'kg' | 'pcs',
-                price: Number(form.get('price')),
-              }).then(() => undefined),
-            'Variant added.',
-          )
-          event.currentTarget.reset()
-        }}
-      >
-        <input name="weight_value" placeholder="Weight" required />
-        <select name="weight_unit" defaultValue="kg">
-          <option value="g">g</option>
-          <option value="kg">kg</option>
-          <option value="pcs">pcs</option>
-        </select>
-        <input name="price" type="number" placeholder="Price cents" min="0" required />
-        <button type="submit">Add variant</button>
-      </form>
+      <section className="subcard stack">
+        <div>
+          <h4>Images</h4>
+          <p className="muted">Upload, reorder, and choose the primary dessert image.</p>
+        </div>
+        <form
+          className="inline-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const form = new FormData(event.currentTarget)
+            const upload = new FormData()
+            const file = form.get('file')
+            if (file instanceof File) {
+              upload.append('file', file)
+            }
+            upload.append('alt_text', String(form.get('alt_text') ?? ''))
+            upload.append('is_primary', String(form.get('is_primary') === 'on'))
+            void run(() => api.uploadImage(dessert.id, upload).then(() => undefined), 'Image uploaded.')
+            event.currentTarget.reset()
+          }}
+        >
+          <input name="file" type="file" accept="image/png,image/jpeg,image/webp" required />
+          <input name="alt_text" placeholder="Alt text" />
+          <label className="checkbox">
+            <input name="is_primary" type="checkbox" />
+            Primary image
+          </label>
+          <button type="submit">Upload image</button>
+        </form>
 
-      <div className="list">
-        {dessert.variants.map((variant) => (
-          <article className="mini-card" key={variant.id}>
-            <strong>
-              {variant.weight_value} {variant.weight_unit}
-            </strong>
-            <span>{formatPrice(variant.price)}</span>
-            <button type="button" className="secondary" onClick={() => void run(() => api.archiveVariant(dessert.id, variant.id).then(() => undefined), 'Variant archived.')}>
-              Archive
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={itemIndex(dessert.variants, variant.id) === 0}
-              onClick={() =>
-                void run(
-                  () =>
-                    api
-                      .reorderVariants(dessert.id, moveOrder(dessert.variants, itemIndex(dessert.variants, variant.id), itemIndex(dessert.variants, variant.id) - 1))
-                      .then(() => undefined),
-                  'Variants reordered.',
-                )
-              }
-            >
-              Up
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={itemIndex(dessert.variants, variant.id) === dessert.variants.length - 1}
-              onClick={() =>
-                void run(
-                  () =>
-                    api
-                      .reorderVariants(dessert.id, moveOrder(dessert.variants, itemIndex(dessert.variants, variant.id), itemIndex(dessert.variants, variant.id) + 1))
-                      .then(() => undefined),
-                  'Variants reordered.',
-                )
-              }
-            >
-              Down
-            </button>
-          </article>
-        ))}
-      </div>
+        <div className="image-grid">
+          {dessert.images.map((image) => (
+            <article className="mini-card image-card" key={image.id}>
+              <div className="image-frame">
+                <img alt={image.alt_text || dessert.name} src={`${apiBaseUrl.replace('/api', '')}${image.url}`} />
+              </div>
+              <div className="section-heading">
+                <strong>{image.alt_text || image.original_filename}</strong>
+                {image.is_primary ? <StatusBadge tone="published">Primary</StatusBadge> : null}
+              </div>
+              <div className="row-actions compact">
+                <button type="button" className="secondary" onClick={() => void run(() => api.setPrimaryImage(dessert.id, image.id).then(() => undefined), 'Primary image updated.')}>
+                  Set primary
+                </button>
+                <button type="button" className="secondary" onClick={() => void run(() => api.deleteImage(dessert.id, image.id).then(() => undefined), 'Image deleted.')}>
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={itemIndex(dessert.images, image.id) === 0}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        api
+                          .reorderImages(dessert.id, moveOrder(dessert.images, itemIndex(dessert.images, image.id), itemIndex(dessert.images, image.id) - 1))
+                          .then(() => undefined),
+                      'Images reordered.',
+                    )
+                  }
+                >
+                  Up
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  disabled={itemIndex(dessert.images, image.id) === dessert.images.length - 1}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        api
+                          .reorderImages(dessert.id, moveOrder(dessert.images, itemIndex(dessert.images, image.id), itemIndex(dessert.images, image.id) + 1))
+                          .then(() => undefined),
+                      'Images reordered.',
+                    )
+                  }
+                >
+                  Down
+                </button>
+              </div>
+            </article>
+          ))}
+          {dessert.images.length === 0 ? <p className="muted">No images uploaded yet.</p> : null}
+        </div>
+      </section>
 
-      <form
-        className="inline-form"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const form = new FormData(event.currentTarget)
-          const upload = new FormData()
-          const file = form.get('file')
-          if (file instanceof File) {
-            upload.append('file', file)
-          }
-          upload.append('alt_text', String(form.get('alt_text') ?? ''))
-          upload.append('is_primary', String(form.get('is_primary') === 'on'))
-          void run(() => api.uploadImage(dessert.id, upload).then(() => undefined), 'Image uploaded.')
-          event.currentTarget.reset()
-        }}
-      >
-        <input name="file" type="file" accept="image/png,image/jpeg,image/webp" required />
-        <input name="alt_text" placeholder="Alt text" />
-        <label>
-          Primary
-          <input name="is_primary" type="checkbox" />
-        </label>
-        <button type="submit">Upload image</button>
-      </form>
-
-      <div className="image-grid">
-        {dessert.images.map((image) => (
-          <article className="mini-card" key={image.id}>
-            <img alt={image.alt_text || dessert.name} src={`${apiBaseUrl.replace('/api', '')}${image.url}`} />
-            <span>{image.is_primary ? 'Primary' : image.alt_text || 'Image'}</span>
-            <button type="button" className="secondary" onClick={() => void run(() => api.setPrimaryImage(dessert.id, image.id).then(() => undefined), 'Primary image updated.')}>
-              Set primary
-            </button>
-            <button type="button" className="secondary" onClick={() => void run(() => api.deleteImage(dessert.id, image.id).then(() => undefined), 'Image deleted.')}>
-              Delete
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={itemIndex(dessert.images, image.id) === 0}
-              onClick={() =>
-                void run(
-                  () =>
-                    api
-                      .reorderImages(dessert.id, moveOrder(dessert.images, itemIndex(dessert.images, image.id), itemIndex(dessert.images, image.id) - 1))
-                      .then(() => undefined),
-                  'Images reordered.',
-                )
-              }
-            >
-              Up
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={itemIndex(dessert.images, image.id) === dessert.images.length - 1}
-              onClick={() =>
-                void run(
-                  () =>
-                    api
-                      .reorderImages(dessert.id, moveOrder(dessert.images, itemIndex(dessert.images, image.id), itemIndex(dessert.images, image.id) + 1))
-                      .then(() => undefined),
-                  'Images reordered.',
-                )
-              }
-            >
-              Down
-            </button>
-          </article>
-        ))}
-      </div>
-
-      <button type="button" className="secondary danger" onClick={() => void run(() => api.archiveDessert(dessert.id).then(() => undefined), 'Dessert archived.')}>
-        Archive dessert
-      </button>
+      <section className="subcard stack">
+        <div>
+          <h4>Status and merchandising flags</h4>
+          <p className="muted">Availability and storefront highlight controls.</p>
+        </div>
+        <div className="toggles">
+          {(['is_available', 'is_new', 'is_popular', 'is_seasonal', 'is_bento', 'is_sugar_free', 'is_gluten_free', 'is_low_calorie'] as const).map((field) => (
+            <label key={field} className="checkbox-card">
+              <span>{field.replaceAll('_', ' ')}</span>
+              <input
+                type="checkbox"
+                checked={Boolean(dessert[field])}
+                onChange={(event) =>
+                  void run(
+                    () => api.updateDessert(dessert.id, { [field]: event.currentTarget.checked }).then(() => undefined),
+                    'Dessert updated.',
+                  )
+                }
+              />
+            </label>
+          ))}
+        </div>
+      </section>
     </section>
   )
 }
 
 function formatPrice(price: number) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(price / 100)
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 2,
+  }).format(price / 100)
 }
 
 function formatDateTime(value: string) {
@@ -1234,6 +1493,11 @@ function variantSnapshot(inquiry: AdminInquiry) {
 function nullableNumber(value: FormDataEntryValue | null) {
   const text = String(value ?? '')
   return text ? Number(text) : null
+}
+
+function nullableText(value: FormDataEntryValue | null) {
+  const text = String(value ?? '').trim()
+  return text || null
 }
 
 function dateTimeLocalValue(value: string | null) {
@@ -1303,6 +1567,33 @@ function moveOrder(items: Array<{ id: number }>, from: number, to: number) {
 
 function itemIndex(items: Array<{ id: number }>, id: number) {
   return items.findIndex((item) => item.id === id)
+}
+
+function sectionTitle(section: AdminSection) {
+  switch (section) {
+    case 'overview':
+      return 'Overview'
+    case 'catalog':
+      return 'Catalog'
+    case 'inquiries':
+      return 'Inquiries'
+    case 'reviews':
+      return 'Reviews'
+    case 'promotions':
+      return 'Promotions'
+    case 'site-settings':
+      return 'Site settings'
+  }
+}
+
+function StatusBadge({
+  children,
+  tone,
+}: {
+  children: string
+  tone: 'published' | 'draft' | 'available' | 'muted'
+}) {
+  return <span className={`status-badge ${tone}`}>{children}</span>
 }
 
 function describeError(error: unknown, fallback: string) {
