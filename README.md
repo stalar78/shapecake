@@ -4,7 +4,7 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, Stage 06 order-request contract completion, and Stage 07 SEO/public discoverability are fully accepted and committed. The next stage is Stage 08: Lovable-based visual design integration and public UX polish.
+Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, Stage 06 order-request contract completion, Stage 07 SEO/public discoverability, and Stage 08 Lovable-based public design integration are accepted and committed. The next stage is Stage 09: production readiness and deployment.
 
 ## Approved MVP
 
@@ -107,9 +107,23 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - Google Analytics and Yandex Metrica hooks emit no scripts without valid explicit configuration;
 - public lint, typecheck and production build are accepted.
 
+## Stage 08 public visual integration
+
+- the customer-approved Lovable concept was integrated into the existing Next.js public application rather than replacing its architecture;
+- the public visual system now uses a warm editorial patisserie direction with Cormorant Garamond and Manrope, restrained radii, image-led cards, editorial spacing and accessible focus states;
+- reusable public header, footer and dessert-card components were introduced;
+- homepage, dessert detail, promotion detail and inquiry presentation were redesigned around real API-backed data only;
+- customer-facing copy was cleaned of implementation/developer language and no Lovable mock business facts were imported;
+- the real inquiry API flow, validation, variant availability filtering, rate/duplicate error handling and public-reference success state were preserved;
+- Stage 07 metadata, canonical URLs, Open Graph, JSON-LD, analytics, robots and sitemap behavior remain intact;
+- public lint, typecheck and production build passed before acceptance;
+- merge commit: `0d3f851`.
+
 ## Working model
 
 GPT acts as project architect and maintains project documentation and GitHub history. Codex handles complex implementation tasks. Lovable provides the visual design reference for the public application.
+
+Implementation workflow for substantial stages: feature branch -> agent implementation -> push -> GPT GitHub review -> fixes in the same branch -> acceptance -> merge to `master`.
 
 ## Local project path
 
