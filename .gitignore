@@ -16,3 +16,4 @@ build/
 *.log
 *.egg-info/
 apps/api/storage/
+backups/
