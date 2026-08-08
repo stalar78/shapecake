@@ -766,8 +766,7 @@ function PromotionPanel({
           event.preventDefault()
           const form = new FormData(event.currentTarget)
           void run(
-            () =>
-              api.createPromotion(promotionPayload(form)).then(() => undefined),
+            () => api.createPromotion(promotionPayload(form)).then(() => undefined),
             'Promotion created.',
           )
           event.currentTarget.reset()
@@ -1287,7 +1286,7 @@ function DessertEditor({
                 api.createVariant(dessert.id, {
                   weight_value: String(form.get('weight_value') ?? '1'),
                   weight_unit: form.get('weight_unit') as 'g' | 'kg' | 'pcs',
-                  price: Number(form.get('price')),
+                  price: rublesToMinorUnits(form.get('price')),
                 }).then(() => undefined),
               'Variant added.',
             )
@@ -1300,7 +1299,10 @@ function DessertEditor({
             <option value="kg">kg</option>
             <option value="pcs">pcs</option>
           </select>
-          <input name="price" type="number" placeholder="Price in kopecks" min="0" required />
+          <label>
+            Price in RUB
+            <input name="price" type="text" inputMode="decimal" placeholder="2800 or 2800.50" required />
+          </label>
           <button type="submit">Add variant</button>
         </form>
 
@@ -1498,6 +1500,24 @@ function nullableNumber(value: FormDataEntryValue | null) {
 function nullableText(value: FormDataEntryValue | null) {
   const text = String(value ?? '').trim()
   return text || null
+}
+
+function rublesToMinorUnits(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+    .replace(',', '.')
+  const match = normalized.match(/^(\d+)(?:\.(\d{1,2}))?$/)
+  if (!match) {
+    throw new Error('Price must be a valid RUB amount, for example 2800 or 2800.50.')
+  }
+  const wholeRubles = Number(match[1])
+  const fractional = (match[2] ?? '').padEnd(2, '0')
+  const minorUnits = wholeRubles * 100 + Number(fractional || '0')
+  if (!Number.isSafeInteger(minorUnits)) {
+    throw new Error('Price is too large.')
+  }
+  return minorUnits
 }
 
 function dateTimeLocalValue(value: string | null) {
