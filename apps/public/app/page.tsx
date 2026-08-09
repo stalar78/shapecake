@@ -51,19 +51,21 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
         <section className="public-shell grid items-center gap-12 py-16 md:py-24 lg:grid-cols-[0.85fr_1fr]">
           <div>
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="mb-6 h-auto w-[160px] md:w-[220px]"
-              height={380}
-              priority
-              src="/brand/cake-and-shape-label.png"
-              width={520}
-            />
-            <p className="eyebrow">Авторская кондитерская</p>
-            <h1 className="display mt-5 max-w-4xl text-6xl font-medium leading-[0.88] md:text-8xl">
-              {settings?.hero_title || "Торт как часть вашего события"}
-            </h1>
+            <div className="inline-flex flex-col items-start">
+              <Image
+                alt=""
+                aria-hidden="true"
+                className="mb-6 h-auto w-[160px] self-center md:w-[220px]"
+                height={380}
+                priority
+                src="/brand/cake-and-shape-label.png"
+                width={520}
+              />
+              <p className="eyebrow">Авторская кондитерская</p>
+              <h1 className="display mt-5 max-w-4xl text-6xl font-medium leading-[0.88] md:text-8xl">
+                {settings?.hero_title || "Торт как часть вашего события"}
+              </h1>
+            </div>
             <p className="mt-7 max-w-xl text-lg leading-8 text-[var(--muted)]">
               {settings?.hero_text || "Авторские торты и десерты для праздников, камерных встреч и личных поводов."}
             </p>
