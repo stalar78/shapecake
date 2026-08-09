@@ -1358,7 +1358,7 @@ function DessertEditor({
             <article className="mini-card variant-card" key={variant.id}>
               <div>
                 <strong>
-                  {variant.weight_value} {variant.weight_unit}
+                  {variant.weight_value} {formatWeightUnit(variant.weight_unit)}
                 </strong>
                 <p className="muted">{formatPrice(variant.price)}</p>
               </div>
@@ -1536,7 +1536,16 @@ function variantSnapshot(inquiry: AdminInquiry) {
   if (!inquiry.variant_weight_value_snapshot || !inquiry.variant_weight_unit_snapshot) {
     return 'Вариант не выбран'
   }
-  return `${inquiry.variant_weight_value_snapshot} ${inquiry.variant_weight_unit_snapshot}`
+  return `${inquiry.variant_weight_value_snapshot} ${formatWeightUnit(inquiry.variant_weight_unit_snapshot)}`
+}
+
+function formatWeightUnit(unit: string) {
+  const labels: Record<'g' | 'kg' | 'pcs', string> = {
+    g: 'г',
+    kg: 'кг',
+    pcs: 'шт',
+  }
+  return unit === 'g' || unit === 'kg' || unit === 'pcs' ? labels[unit] : unit
 }
 
 function nullableNumber(value: FormDataEntryValue | null) {
