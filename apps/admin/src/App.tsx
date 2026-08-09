@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   AdminApi,
@@ -446,6 +446,26 @@ function SettingsPanel({
   settings: SiteSettings
   run: (action: () => Promise<void>, success: string) => Promise<void>
 }) {
+  const aboutMasterImageInputRef = useRef<HTMLInputElement | null>(null)
+  const craftImageInputRef = useRef<HTMLInputElement | null>(null)
+
+  function uploadSiteSettingsImage(
+    inputRef: React.RefObject<HTMLInputElement | null>,
+    uploadAction: (form: FormData) => Promise<SiteSettings>,
+    successMessage: string,
+  ) {
+    const file = inputRef.current?.files?.[0]
+    if (!file) {
+      return
+    }
+    const upload = new FormData()
+    upload.append('file', file)
+    void run(() => uploadAction(upload).then(() => undefined), successMessage)
+    if (inputRef.current) {
+      inputRef.current.value = ''
+    }
+  }
+
   return (
     <section className="card stack wide">
       <div>
@@ -471,6 +491,50 @@ function SettingsPanel({
         <textarea name="hero_text" defaultValue={settings.hero_text} placeholder="Текст первого экрана" />
         <input name="about_master_title" defaultValue={settings.about_master_title} placeholder="Заголовок блока о мастере" />
         <textarea name="about_master_text" defaultValue={settings.about_master_text} placeholder="Текст блока о мастере" />
+        <section className="subcard stack">
+          <div>
+            <h3>Фото блока «Ремесло»</h3>
+            <p className="muted">Загрузите изображение для блока «Ремесло» на главной странице.</p>
+          </div>
+          {settings.craft_image_url ? (
+            <div className="image-frame">
+              <img alt="Авторская работа Cake & Shape" src={adminMediaUrl(settings.craft_image_url)} />
+            </div>
+          ) : (
+            <p className="muted">Фото пока не загружено.</p>
+          )}
+          <div className="inline-form">
+            <input ref={craftImageInputRef} name="craft_image_file" type="file" accept="image/png,image/jpeg,image/webp" />
+            <button
+              type="button"
+              onClick={() => uploadSiteSettingsImage(craftImageInputRef, (form) => api.updateCraftImage(form), 'Фото блока «Ремесло» сохранено.')}
+            >
+              Загрузить фото
+            </button>
+          </div>
+        </section>
+        <section className="subcard stack">
+          <div>
+            <h3>Фото блока «О мастере»</h3>
+            <p className="muted">Загрузите портрет или другое изображение для блока на главной странице.</p>
+          </div>
+          {settings.about_master_image_url ? (
+            <div className="image-frame">
+              <img alt="Кондитер Cake & Shape" src={adminMediaUrl(settings.about_master_image_url)} />
+            </div>
+          ) : (
+            <p className="muted">Фото пока не загружено.</p>
+          )}
+          <div className="inline-form">
+            <input ref={aboutMasterImageInputRef} name="about_master_image_file" type="file" accept="image/png,image/jpeg,image/webp" />
+            <button
+              type="button"
+              onClick={() => uploadSiteSettingsImage(aboutMasterImageInputRef, (form) => api.updateAboutMasterImage(form), 'Фото блока «О мастере» сохранено.')}
+            >
+              Загрузить фото
+            </button>
+          </div>
+        </section>
         <div className="inline-form">
           <input name="whatsapp_url" defaultValue={settings.whatsapp_url} placeholder="Ссылка WhatsApp" />
           <input name="telegram_url" defaultValue={settings.telegram_url} placeholder="Ссылка Telegram" />
@@ -1438,7 +1502,7 @@ function DessertEditor({
           {dessert.images.map((image) => (
             <article className="mini-card image-card" key={image.id}>
               <div className="image-frame">
-                <img alt={image.alt_text || dessert.name} src={`${apiBaseUrl.replace('/api', '')}${image.url}`} />
+                <img alt={image.alt_text || dessert.name} src={adminMediaUrl(image.url)} />
               </div>
               <div className="section-heading">
                 <strong>{image.alt_text || image.original_filename}</strong>
@@ -1540,6 +1604,10 @@ function formatPrice(price: number) {
     currency: 'RUB',
     maximumFractionDigits: 2,
   }).format(price / 100)
+}
+
+function adminMediaUrl(path: string) {
+  return `${apiBaseUrl.replace('/api', '')}${path}`
 }
 
 function formatDateTime(value: string) {

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,7 +24,12 @@ from app.auth.services import (
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.site_settings.schemas import SiteSettingsResponse, SiteSettingsUpdate
-from app.site_settings.services import get_site_settings
+from app.site_settings.services import (
+    get_site_settings,
+    site_settings_response,
+    update_about_master_image,
+    update_craft_image,
+)
 
 router = APIRouter(prefix="/api")
 
@@ -41,9 +46,12 @@ async def ready(db: AsyncSession = Depends(get_db_session)) -> dict[str, str]:
 
 
 @router.get("/public/site-settings", response_model=SiteSettingsResponse)
-async def public_site_settings(db: AsyncSession = Depends(get_db_session)) -> SiteSettingsResponse:
-    settings = await get_site_settings(db)
-    return SiteSettingsResponse.model_validate(settings)
+async def public_site_settings(
+    db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+) -> SiteSettingsResponse:
+    site_settings = await get_site_settings(db)
+    return site_settings_response(site_settings, settings)
 
 
 @router.post("/admin/auth/login", response_model=AdminUserResponse)
@@ -118,16 +126,18 @@ async def admin_overview(
 @router.get("/admin/site-settings", response_model=SiteSettingsResponse)
 async def admin_site_settings(
     db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
     _user: AdminUser = Depends(get_current_admin),
 ) -> SiteSettingsResponse:
-    settings = await get_site_settings(db)
-    return SiteSettingsResponse.model_validate(settings)
+    site_settings = await get_site_settings(db)
+    return site_settings_response(site_settings, settings)
 
 
 @router.patch("/admin/site-settings", response_model=SiteSettingsResponse)
 async def update_site_settings(
     payload: SiteSettingsUpdate,
     db: AsyncSession = Depends(get_db_session),
+    app_settings: Settings = Depends(get_settings),
     _csrf: None = Depends(require_csrf),
 ) -> SiteSettingsResponse:
     settings = await get_site_settings(db)
@@ -135,4 +145,28 @@ async def update_site_settings(
         setattr(settings, key, value)
     await db.commit()
     await db.refresh(settings)
-    return SiteSettingsResponse.model_validate(settings)
+    return site_settings_response(settings, app_settings)
+
+
+@router.post("/admin/site-settings/about-master-image", response_model=SiteSettingsResponse)
+async def upload_about_master_image(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    _user: AdminUser = Depends(get_current_admin),
+    _csrf: None = Depends(require_csrf),
+) -> SiteSettingsResponse:
+    site_settings = await update_about_master_image(db, file, settings)
+    return site_settings_response(site_settings, settings)
+
+
+@router.post("/admin/site-settings/craft-image", response_model=SiteSettingsResponse)
+async def upload_craft_image(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db_session),
+    settings: Settings = Depends(get_settings),
+    _user: AdminUser = Depends(get_current_admin),
+    _csrf: None = Depends(require_csrf),
+) -> SiteSettingsResponse:
+    site_settings = await update_craft_image(db, file, settings)
+    return site_settings_response(site_settings, settings)

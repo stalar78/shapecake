@@ -79,6 +79,8 @@ export type SiteSettings = {
   hero_text: string
   about_master_title: string
   about_master_text: string
+  about_master_image_url: string | null
+  craft_image_url: string | null
   phone: string
   email: string
   whatsapp_url: string
@@ -471,6 +473,14 @@ export class AdminApi {
 
   updateSiteSettings(payload: Partial<SiteSettings>): Promise<SiteSettings> {
     return this.mutate('/admin/site-settings', { method: 'PATCH', body: JSON.stringify(payload) })
+  }
+
+  updateAboutMasterImage(form: FormData): Promise<SiteSettings> {
+    return this.mutate('/admin/site-settings/about-master-image', { method: 'POST', body: form })
+  }
+
+  updateCraftImage(form: FormData): Promise<SiteSettings> {
+    return this.mutate('/admin/site-settings/craft-image', { method: 'POST', body: form })
   }
 
   overview(): Promise<AdminOverview> {

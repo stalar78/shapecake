@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shape_cake} -d ${POSTGRES_DB:-shape_cake}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shape_cake} -d ${POSTGRES_DB:-shape_cake}" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,7 +32,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=2)"]
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=2)" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -61,6 +61,7 @@ services:
     environment:
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-http://api:8000/api}
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api}
+      PUBLIC_MEDIA_ORIGIN: ${PUBLIC_MEDIA_ORIGIN:-http://localhost:8000}
     ports:
       - "3000:3000"
     depends_on:

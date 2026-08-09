@@ -44,6 +44,8 @@ class SiteSettingsBase(BaseModel):
     hero_text: str
     about_master_title: str = Field(max_length=200)
     about_master_text: str
+    about_master_image_url: str | None = None
+    craft_image_url: str | None = None
     phone: str = Field(max_length=80)
     email: str = Field(max_length=320)
     whatsapp_url: str = Field(max_length=500)

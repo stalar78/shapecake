@@ -7,8 +7,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.models import AdminUser
 from app.auth.passwords import hash_password, verify_password
+from app.core.config import Settings, get_settings
 from app.site_settings.models import SiteSettings
 from tests.conftest import create_admin, expire_sessions
+
+PNG_BYTES = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+JPEG_BYTES = b"\xff\xd8\xff" + b"\x00" * 32
 
 
 async def _login(client: AsyncClient, email: str = "admin@example.com", password: str = "Password12345"):
@@ -154,6 +158,8 @@ async def test_site_settings_stage_05_fields_trim_persist_and_public_payload_is_
     assert public.status_code == 200
     public_body = public.json()
     assert public_body["about_master_text"] == "Small-batch desserts"
+    assert public_body["about_master_image_url"] is None
+    assert public_body["craft_image_url"] is None
     assert "created_at" not in public_body
     assert "updated_at" not in public_body
     assert "id" not in public_body
@@ -236,6 +242,135 @@ async def test_public_site_settings_response(client: AsyncClient) -> None:
     assert response.status_code == 200
     assert response.json()["hero_title"] == "Cake & Shape"
     assert response.json()["about_master_title"] == "About the master"
+    assert response.json()["about_master_image_url"] is None
+    assert response.json()["craft_image_url"] is None
+
+
+async def test_about_master_image_upload_uses_media_storage_and_public_url(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+) -> None:
+    await create_admin(db_session)
+    unauthorized = await client.post(
+        "/api/admin/site-settings/about-master-image",
+        files={"file": ("master.png", PNG_BYTES, "image/png")},
+    )
+    assert unauthorized.status_code == 401
+
+    await _login(client)
+    missing_csrf = await client.post(
+        "/api/admin/site-settings/about-master-image",
+        files={"file": ("master.png", PNG_BYTES, "image/png")},
+    )
+    assert missing_csrf.status_code == 403
+
+    original_override = client._transport.app.dependency_overrides.get(get_settings)
+    client._transport.app.dependency_overrides[get_settings] = lambda: Settings(
+        media_root=str(tmp_path),
+        media_public_base_url="/api/media",
+    )
+    csrf = await _csrf(client)
+    try:
+        uploaded = await client.post(
+            "/api/admin/site-settings/about-master-image",
+            files={"file": ("master.png", PNG_BYTES, "image/png")},
+            headers={"x-csrf-token": csrf},
+        )
+        assert uploaded.status_code == 200
+        body = uploaded.json()
+        assert body["about_master_image_url"].startswith("/api/media/desserts/")
+        stored_path = tmp_path / body["about_master_image_url"].removeprefix("/api/media/")
+        assert stored_path.exists()
+
+        public = await client.get("/api/public/site-settings")
+        assert public.status_code == 200
+        assert public.json()["about_master_image_url"] == body["about_master_image_url"]
+
+        replaced = await client.post(
+            "/api/admin/site-settings/about-master-image",
+            files={"file": ("master.jpg", JPEG_BYTES, "image/jpeg")},
+            headers={"x-csrf-token": csrf},
+        )
+        assert replaced.status_code == 200
+        assert replaced.json()["about_master_image_url"].endswith(".jpg")
+        assert not stored_path.exists()
+    finally:
+        if original_override is None:
+            client._transport.app.dependency_overrides.pop(get_settings, None)
+        else:
+            client._transport.app.dependency_overrides[get_settings] = original_override
+
+
+async def test_about_master_image_upload_reuses_media_validation(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+) -> None:
+    await create_admin(db_session)
+    await _login(client)
+    csrf = await _csrf(client)
+    original_override = client._transport.app.dependency_overrides.get(get_settings)
+    client._transport.app.dependency_overrides[get_settings] = lambda: Settings(
+        media_root=str(tmp_path),
+        max_upload_bytes=16,
+    )
+    try:
+        oversize = await client.post(
+            "/api/admin/site-settings/about-master-image",
+            files={"file": ("big.png", PNG_BYTES, "image/png")},
+            headers={"x-csrf-token": csrf},
+        )
+        assert oversize.status_code == 413
+        mismatch = await client.post(
+            "/api/admin/site-settings/about-master-image",
+            files={"file": ("bad.png", JPEG_BYTES, "image/png")},
+            headers={"x-csrf-token": csrf},
+        )
+        assert mismatch.status_code == 400
+        assert not list(tmp_path.rglob("*.*"))
+    finally:
+        if original_override is None:
+            client._transport.app.dependency_overrides.pop(get_settings, None)
+        else:
+            client._transport.app.dependency_overrides[get_settings] = original_override
+
+
+async def test_craft_image_upload_uses_media_storage_and_public_url(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    tmp_path,
+) -> None:
+    await create_admin(db_session)
+    await _login(client)
+    csrf = await _csrf(client)
+
+    original_override = client._transport.app.dependency_overrides.get(get_settings)
+    client._transport.app.dependency_overrides[get_settings] = lambda: Settings(
+        media_root=str(tmp_path),
+        media_public_base_url="/api/media",
+    )
+    try:
+        uploaded = await client.post(
+            "/api/admin/site-settings/craft-image",
+            files={"file": ("craft.png", PNG_BYTES, "image/png")},
+            headers={"x-csrf-token": csrf},
+        )
+        assert uploaded.status_code == 200
+        body = uploaded.json()
+        assert body["craft_image_url"].startswith("/api/media/desserts/")
+        assert body["about_master_image_url"] is None
+        stored_path = tmp_path / body["craft_image_url"].removeprefix("/api/media/")
+        assert stored_path.exists()
+
+        public = await client.get("/api/public/site-settings")
+        assert public.status_code == 200
+        assert public.json()["craft_image_url"] == body["craft_image_url"]
+    finally:
+        if original_override is None:
+            client._transport.app.dependency_overrides.pop(get_settings, None)
+        else:
+            client._transport.app.dependency_overrides[get_settings] = original_override
 
 
 async def test_public_site_settings_missing_singleton_returns_configuration_error(

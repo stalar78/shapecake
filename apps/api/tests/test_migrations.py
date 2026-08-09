@@ -83,7 +83,18 @@ async def _inspect_schema(database_url: str) -> tuple[set[str], set[str], int]:
                             FROM information_schema.columns
                             WHERE table_schema = 'public'
                               AND table_name = 'site_settings'
-                              AND column_name IN ('about_master_title', 'about_master_text')
+                              AND column_name IN (
+                                  'about_master_title',
+                                  'about_master_text',
+                                  'about_master_image_storage_key',
+                                  'about_master_image_original_filename',
+                                  'about_master_image_mime_type',
+                                  'about_master_image_file_size',
+                                  'craft_image_storage_key',
+                                  'craft_image_original_filename',
+                                  'craft_image_mime_type',
+                                  'craft_image_file_size'
+                              )
                             """
                         )
                     )
@@ -198,6 +209,14 @@ def run_migration_smoke_test() -> None:
         "ix_promotions_public_order",
         "about_master_title",
         "about_master_text",
+        "about_master_image_storage_key",
+        "about_master_image_original_filename",
+        "about_master_image_mime_type",
+        "about_master_image_file_size",
+        "craft_image_storage_key",
+        "craft_image_original_filename",
+        "craft_image_mime_type",
+        "craft_image_file_size",
         "variant_id",
         "variant_weight_value_snapshot",
         "variant_weight_unit_snapshot",

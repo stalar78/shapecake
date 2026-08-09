@@ -11,7 +11,6 @@ import {
 import { DessertCard } from "./components/DessertCard";
 import { PublicFooter } from "./components/PublicFooter";
 import { PublicHeader } from "./components/PublicHeader";
-import { formatPrice } from "./components/format";
 import { InquiryForm } from "./InquiryForm";
 import { absoluteMediaUrl, browserApiBaseUrl, businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
 
@@ -39,9 +38,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
     getPublicReviews(apiBaseUrl, { featured: true, limit: 3 }).catch(() => null),
     getPublicPromotions(apiBaseUrl, { limit: 3 }).catch(() => null),
   ]);
-  const heroDessert = catalog?.items.find((dessert) => dessert.primary_image) ?? catalog?.items[0] ?? null;
   const featuredDesserts = catalog?.items.slice(0, 3) ?? [];
   const activePromotion = promotions?.items[0] ?? null;
+  const craftImageUrl = absoluteMediaUrl(settings?.craft_image_url);
+  const aboutMasterImageUrl = absoluteMediaUrl(settings?.about_master_image_url);
 
   return (
     <>
@@ -54,7 +54,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             <Image
               alt=""
               aria-hidden="true"
-              className="mb-6 h-auto w-[104px] md:w-[132px]"
+              className="mb-6 h-auto w-[160px] md:w-[220px]"
               height={380}
               priority
               src="/brand/cake-and-shape-label.png"
@@ -74,19 +74,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           </div>
           <div>
             <div className="media-frame aspect-[4/5]">
-              {heroDessert?.primary_image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img alt={heroDessert.primary_image.alt_text || heroDessert.name} src={absoluteMediaUrl(heroDessert.primary_image.url) ?? ""} />
-              ) : (
-                <div className="media-placeholder">Фотография десерта скоро появится.</div>
-              )}
+              <Image
+                alt="Авторский десерт Cake & Shape"
+                fill
+                priority
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                src="/hero/cake-and-shape-hero.png"
+              />
             </div>
-            {heroDessert ? (
-              <div className="mt-5 flex items-baseline justify-between gap-4 border-b border-[var(--line)] pb-3">
-                <h2 className="display text-4xl font-semibold">{heroDessert.name}</h2>
-                <p className="text-sm text-[var(--muted)]">от {formatPrice(heroDessert.variants[0]?.price)}</p>
-              </div>
-            ) : null}
           </div>
         </section>
 
@@ -132,12 +127,26 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
                 В центре Cake &amp; Shape — сам десерт: вкус, аккуратная подача и внимание к деталям. Каталог помогает выбрать основу, а пожелания к событию можно обсудить в заявке.
               </p>
             </div>
-            <div className="media-frame aspect-[4/3]"><div className="media-placeholder">Визуальный материал появится вместе с брендовой съемкой.</div></div>
+            <div className="media-frame aspect-[4/3]">
+              {craftImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img alt="Авторская работа Cake & Shape" src={craftImageUrl} />
+              ) : (
+                <div className="media-placeholder">Визуальный материал появится вместе с брендовой съемкой.</div>
+              )}
+            </div>
           </div>
         </section>
 
         <section id="about" className="public-shell grid gap-10 py-16 md:py-24 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
-          <div className="media-frame aspect-[4/5]"><div className="media-placeholder">Портрет мастера будет добавлен после фотосъемки.</div></div>
+          <div className="media-frame aspect-[4/5]">
+            {aboutMasterImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt="Кондитер Cake & Shape" src={aboutMasterImageUrl} />
+            ) : (
+              <div className="media-placeholder">Портрет мастера будет добавлен после фотосъемки.</div>
+            )}
+          </div>
           <div>
             <p className="eyebrow">О мастере</p>
             <h2 className="display mt-3 text-5xl font-semibold leading-none md:text-6xl">{settings?.about_master_title || "О мастере"}</h2>
