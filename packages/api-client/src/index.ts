@@ -625,6 +625,12 @@ export class AdminApi {
     return this.mutate(`/admin/desserts/${dessertId}/images`, { method: 'POST', body: form })
   }
 
+  updateImageAlt(dessertId: number, imageId: number, altText: string): Promise<AdminDessert> {
+    const form = new FormData()
+    form.append('alt_text', altText)
+    return this.mutate(`/admin/desserts/${dessertId}/images/${imageId}`, { method: 'PATCH', body: form })
+  }
+
   setPrimaryImage(dessertId: number, imageId: number): Promise<AdminDessert> {
     return this.mutate(`/admin/desserts/${dessertId}/images/${imageId}/primary`, { method: 'POST' })
   }

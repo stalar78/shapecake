@@ -1444,6 +1444,23 @@ function DessertEditor({
                 <strong>{image.alt_text || image.original_filename}</strong>
                 {image.is_primary ? <StatusBadge tone="published">Основная</StatusBadge> : null}
               </div>
+              <form
+                className="form"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const form = new FormData(event.currentTarget)
+                  void run(
+                    () => api.updateImageAlt(dessert.id, image.id, String(form.get('alt_text') ?? '')).then(() => undefined),
+                    'Описание фотографии сохранено.',
+                  )
+                }}
+              >
+                <label>
+                  Описание изображения (Alt)
+                  <input name="alt_text" defaultValue={image.alt_text} />
+                </label>
+                <button type="submit" className="secondary">Сохранить описание</button>
+              </form>
               <div className="row-actions compact">
                 <button type="button" className="secondary" onClick={() => void run(() => api.setPrimaryImage(dessert.id, image.id).then(() => undefined), 'Основная фотография обновлена.')}>
                   Сделать основной
