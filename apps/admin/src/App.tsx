@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   AdminApi,
@@ -204,7 +204,7 @@ function App() {
     return (
       <main className="shell shell-narrow">
         <h1>Панель управления Cake &amp; Shape</h1>
-        <p className="muted">Войдите под локальной учетной записью администратора, созданной через CLI.</p>
+        <p className="muted">Введите данные администратора для входа в панель управления.</p>
         <form className="card form" onSubmit={handleLogin}>
           <label>
             Эл. почта
@@ -1061,7 +1061,7 @@ function DessertPanel({
                   slug: String(form.get('slug') ?? ''),
                   short_description: String(form.get('short_description') ?? ''),
                 }).then(() => undefined),
-              'Dessert created.',
+              'Десерт создан.',
             )
             event.currentTarget.reset()
           }}
@@ -1146,7 +1146,7 @@ function DessertPanel({
         ) : (
           <section className="card empty-state">
             <h3>Выберите десерт</h3>
-            <p className="muted">Откройте десерт из списка, чтобы редактировать описание, варианты, фотографии и флаги мерчандайзинга.</p>
+            <p className="muted">Откройте десерт из списка, чтобы редактировать описание, варианты, фотографии и параметры отображения в каталоге.</p>
           </section>
         )}
       </div>
@@ -1225,7 +1225,7 @@ function DessertEditor({
         >
           <div className="inline-form wide-inputs">
             <label>
-              Category
+              Категория
               <select name="category_id" defaultValue={String(dessert.category_id)}>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -1342,13 +1342,13 @@ function DessertEditor({
         >
           <input name="weight_value" placeholder="Значение веса" required />
           <select name="weight_unit" defaultValue="kg">
-            <option value="g">g</option>
-            <option value="kg">kg</option>
-            <option value="pcs">pcs</option>
+            <option value="g">г</option>
+            <option value="kg">кг</option>
+            <option value="pcs">шт</option>
           </select>
           <label>
             Цена в ₽
-            <input name="price" type="text" inputMode="decimal" placeholder="2800 or 2800.50" required />
+            <input name="price" type="text" inputMode="decimal" placeholder="2800 или 2800,50" required />
           </label>
           <button type="submit">Добавить вариант</button>
         </form>
@@ -1421,7 +1421,7 @@ function DessertEditor({
             }
             upload.append('alt_text', String(form.get('alt_text') ?? ''))
             upload.append('is_primary', String(form.get('is_primary') === 'on'))
-            void run(() => api.uploadImage(dessert.id, upload).then(() => undefined), 'Image uploaded.')
+            void run(() => api.uploadImage(dessert.id, upload).then(() => undefined), 'Фотография загружена.')
             event.currentTarget.reset()
           }}
         >
@@ -1492,7 +1492,7 @@ function DessertEditor({
 
       <section className="subcard stack">
         <div>
-          <h4>Статус и флаги мерчандайзинга</h4>
+          <h4>Статус и отображение в каталоге</h4>
           <p className="muted">Управление доступностью и подсветкой на витрине.</p>
         </div>
         <div className="toggles">
@@ -1589,7 +1589,7 @@ function promotionPayload(form: FormData): Partial<AdminPromotion> {
   const startsAt = dateTimePayload(form.get('starts_at'))
   const endsAt = dateTimePayload(form.get('ends_at'))
   if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
-    throw new Error('Поле ends_at должно быть позже starts_at.')
+    throw new Error('Дата завершения акции должна быть позже даты начала.')
   }
   return {
     dessert_id: nullableNumber(form.get('dessert_id')),
