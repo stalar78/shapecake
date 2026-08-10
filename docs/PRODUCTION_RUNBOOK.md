@@ -1,232 +1,507 @@
 # Production Runbook
 
-This runbook is for the accepted Stage 09 production Compose topology. It does not provision TLS, DNS, VPS infrastructure, or production secrets.
+This runbook describes the accepted Cake & Shape production deployment and the operating procedure after launch.
 
-## Baseline
+## Production Baseline
 
-- Edge: `nginx` publishes port `80`.
-- Internal services: `public`, `admin`, `api`, `postgres`, and one-shot `migrate`.
-- PostgreSQL data volume: `postgres_prod_data`.
-- API media volume: `api_prod_media`.
+Production launch was accepted on 2026-08-10.
+
+- VPS hostname: `cakeshape-prod`.
+- VPS public IPv4: `159.194.228.151`.
+- Repository path on VPS: `/opt/cakeshape`.
+- Production Compose project: `cakeshape_prod`.
 - Production Compose file: `docker-compose.prod.yml`.
-- Production environment file: `.env.production`, created from `.env.production.example`.
+- Production environment file: `/opt/cakeshape/.env.production`.
+- Public site: `https://cakeshape.ru`.
+- Public alias: `https://www.cakeshape.ru`.
+- Admin site: `https://admin.cakeshape.ru`.
+- API health: `https://cakeshape.ru/api/health`.
+- Internet-facing service: Docker `nginx` on ports `80` and `443`.
+- Internal services: `public`, `admin`, `api`, `postgres`, and one-shot `migrate`.
+- PostgreSQL volume: `cakeshape_prod_postgres_prod_data`.
+- API media volume: `cakeshape_prod_api_prod_media`.
 
-Never remove production Docker volumes as part of routine production operations.
+The production database and media volumes are the source of truth after launch. Never overwrite them from a local/pre-production snapshot during a normal deployment.
 
-## Initial Setup
+Never run `docker compose down -v` in production.
 
-1. Prepare an Ubuntu host with Docker Engine and the Docker Compose plugin.
-2. Clone the reviewed repository revision.
-3. Create `.env.production` from `.env.production.example`.
-4. Generate strong values for `POSTGRES_PASSWORD`, `SESSION_HASH_PEPPER`, and any other required secrets. Do not commit `.env.production`.
-5. Set the public origins for the actual deployment:
-   - `PUBLIC_SITE_ORIGIN`
-   - `NEXT_PUBLIC_SITE_ORIGIN`
-   - `PUBLIC_MEDIA_ORIGIN`
-   - `NEXT_PUBLIC_API_BASE_URL`
-   - `VITE_ADMIN_API_BASE_URL`
-6. Validate configuration:
+## Security Invariants
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml config
+- `.env.production` and all production secrets stay outside Git.
+- Session cookies remain HttpOnly and production sessions use secure cookies.
+- Mutating admin endpoints remain CSRF-protected.
+- Authentication tokens are never stored in localStorage.
+- PostgreSQL is not published to the public network.
+- Test reset tooling is never used against production.
+- Certificates/private keys are not committed to Git.
+- Production media and database data are not committed to Git.
+- Do not trust arbitrary client-supplied forwarding headers outside the controlled Nginx boundary.
+
+## Current Production Topology
+
+```text
+Internet
+   |
+   | 80 / 443
+   v
+Docker Nginx
+   |-------------------------------|
+   |               |               |
+   v               v               v
+Next.js public   Vite admin       FastAPI
+                                   |
+                                   v
+                               PostgreSQL
+                                   |
+                                   +--> persistent media volume
 ```
 
-7. Build images:
+Nginx routes the public host to the Next.js service, the admin host to the admin service, and `/api/` traffic to FastAPI.
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml build
+## DNS
+
+The following names must resolve to `159.194.228.151`:
+
+```text
+cakeshape.ru
+www.cakeshape.ru
+admin.cakeshape.ru
 ```
 
-8. Run migrations through the one-shot service:
+Mail-related MX/TXT/autoconfig/autodiscover records are independent of the website deployment and must not be removed when editing web DNS records.
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
+Useful local verification:
+
+```powershell
+Resolve-DnsName cakeshape.ru -Type A
+Resolve-DnsName www.cakeshape.ru -Type A
+Resolve-DnsName admin.cakeshape.ru -Type A
 ```
 
-9. Start services:
+## TLS / Let's Encrypt
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d postgres api public admin nginx
+The production certificate is managed by Certbot on the VPS.
+
+Certificate name:
+
+```text
+cakeshape.ru
 ```
 
-10. Verify health and logs:
+Certificate paths:
+
+```text
+/etc/letsencrypt/live/cakeshape.ru/fullchain.pem
+/etc/letsencrypt/live/cakeshape.ru/privkey.pem
+```
+
+Covered names:
+
+```text
+cakeshape.ru
+www.cakeshape.ru
+admin.cakeshape.ru
+```
+
+The Docker Nginx container mounts `/etc/letsencrypt` read-only and publishes ports `80` and `443`.
+
+Certbot uses the `standalone` authenticator. Because standalone validation needs port 80, renewal hooks temporarily stop only the production Nginx container and then start that same container again.
+
+Hooks:
+
+```text
+/usr/local/sbin/cakeshape-certbot-pre
+/usr/local/sbin/cakeshape-certbot-post
+```
+
+Hook links:
+
+```text
+/etc/letsencrypt/renewal-hooks/pre/10-cakeshape-nginx-stop
+/etc/letsencrypt/renewal-hooks/post/90-cakeshape-nginx-start
+```
+
+Certbot timer checks:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml ps
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 api
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 nginx
+systemctl is-enabled certbot.timer
+systemctl is-active certbot.timer
+systemctl list-timers certbot.timer --no-pager
 ```
+
+Renewal simulation was successfully verified at launch with:
+
+```sh
+certbot renew --dry-run
+```
+
+A successful dry-run is not a reason to rerun it routinely. Re-test after changing Certbot, Nginx, firewall, DNS, or renewal hooks.
+
+## Health Checks
+
+Production services are expected to show:
+
+- `postgres`: healthy;
+- `api`: healthy;
+- `public`: healthy;
+- `admin`: healthy;
+- `migrate`: exited with code 0 after migration;
+- `nginx`: running with ports 80/443 published.
+
+Check:
+
+```sh
+cd /opt/cakeshape
+docker compose -f docker-compose.prod.yml --env-file .env.production ps -a
+```
+
+External smoke:
+
+```sh
+curl -I https://cakeshape.ru
+curl -I https://admin.cakeshape.ru
+curl -i https://cakeshape.ru/api/health
+curl -I http://cakeshape.ru
+```
+
+Expected:
+
+- public HTTPS: `200`;
+- admin HTTPS: `200`;
+- API health: `200` with `{"status":"ok"}`;
+- HTTP: `301` to HTTPS.
 
 ## Administrator Bootstrap
 
 The repository includes a verified administrator creation command:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml run --rm api python -m app.auth.create_admin
+docker compose -f docker-compose.prod.yml --env-file .env.production run --rm api python -m app.auth.create_admin
 ```
 
-Use the interactive prompts or pass `--email` only. Avoid passing passwords in shell history.
+Use interactive password entry. Do not pass passwords in shell history.
 
-## Normal Update Procedure
+Do not create additional production administrators without an explicit operational need.
 
-1. Fetch the approved deployment revision.
-2. Inspect the working tree and revision before changing services:
+## Mandatory Pre-Deploy Backup
+
+Before every significant production deployment, create a fresh production backup:
 
 ```sh
-git status --short
-git log --oneline -5
+/usr/local/sbin/cakeshape-backup
 ```
 
-3. Build changed images:
+The production backup script creates one timestamped directory under:
+
+```text
+/var/backups/cakeshape/YYYYMMDDTHHMMSSZ/
+```
+
+Each backup contains:
+
+```text
+postgres.dump
+media.tar.gz
+SHA256SUMS
+```
+
+The database dump is PostgreSQL custom format. The media archive contains the current API media storage. `SHA256SUMS` records integrity hashes for both artifacts.
+
+Verify the newest backup:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml build
+LATEST="$(find /var/backups/cakeshape -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+echo "$LATEST"
+ls -lh "$LATEST"
+cat "$LATEST/SHA256SUMS"
 ```
 
-4. Run the migration service:
+Never begin a risky migration or data-affecting deployment if the fresh backup did not complete successfully.
+
+## Automatic Daily Backup
+
+A systemd timer runs the same production backup automatically.
+
+Service:
+
+```text
+cakeshape-backup.service
+```
+
+Timer:
+
+```text
+cakeshape-backup.timer
+```
+
+Schedule:
+
+```text
+02:30 UTC daily, with up to 10 minutes randomized delay
+```
+
+Current on-host retention:
+
+```text
+14 days
+```
+
+Checks:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml run --rm migrate
+systemctl is-enabled cakeshape-backup.timer
+systemctl is-active cakeshape-backup.timer
+systemctl list-timers cakeshape-backup.timer --no-pager
+systemctl status cakeshape-backup.service --no-pager
+journalctl -u cakeshape-backup.service -n 50 --no-pager
 ```
 
-5. Recreate application services in a controlled way:
+Manual systemd execution test:
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d api public admin nginx
+systemctl start cakeshape-backup.service
 ```
 
-6. Verify:
+For a successful oneshot service, `inactive (dead)` after completion is normal when the process exited with `status=0/SUCCESS`.
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml ps
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 api
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 public
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 admin
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=100 nginx
-```
+## Off-Site Backup Requirement
 
-Do not deploy arbitrary unreviewed branch state. Do not use `git reset --hard` as a normal update step; reserve it for deliberate recovery after preserving evidence and local changes.
+The current automatic backups are stored on the same VPS as production. They protect against accidental database changes, failed deployments, bad migrations, and damaged Docker volumes, but they do not protect against total VPS loss.
 
-## PostgreSQL Backup
+The first post-launch infrastructure priority is to copy encrypted production backups to storage outside `159.194.228.151`.
 
-Create a logical custom-format backup without stopping PostgreSQL:
+Until off-site backup is implemented, VPS/provider snapshots are useful only as a supplementary layer and must not be treated as the sole backup strategy.
+
+## Repository Backup / Restore Utilities
+
+The repository also contains focused PostgreSQL/media backup and restore-verification utilities.
+
+PostgreSQL logical backup:
 
 ```sh
 infra/ops/backup-postgres.sh
 ```
 
-Default output:
-
-```text
-backups/postgres/postgres-YYYYMMDD-HHMMSS.dump
-```
-
-The script reads Compose/environment configuration from `docker-compose.prod.yml` and `.env.production` by default. It does not print database passwords and does not modify the database.
-
-Recommended retention for launch:
-
-- daily database backups;
-- keep 7 daily backups;
-- keep 4 weekly backups;
-- copy encrypted backups off the VPS.
-
-VPS snapshots are useful as a secondary layer, but a VPS snapshot alone is not a sufficient application backup strategy.
-
-## PostgreSQL Restore Verification
-
-Verify a backup by restoring it into a separate database, not over production:
+PostgreSQL restore verification into a separate database:
 
 ```sh
 infra/ops/restore-postgres.sh backups/postgres/postgres-YYYYMMDD-HHMMSS.dump
 ```
 
-By default the script creates a database named like:
-
-```text
-<production_db>_restore_verify_YYYYMMDD_HHMMSS
-```
-
-It validates the archive, restores it, queries the restored database, and prints the Alembic version. If you choose an existing target database, replacement requires:
-
-```sh
-ALLOW_REPLACE_TARGET_DB=yes TARGET_DB=my_restore_check infra/ops/restore-postgres.sh backups/postgres/postgres-YYYYMMDD-HHMMSS.dump
-```
-
-In-place production restore is deliberately blocked unless both are true:
-
-```sh
-TARGET_DB=<production_db> ALLOW_PRODUCTION_RESTORE=yes ALLOW_REPLACE_TARGET_DB=yes infra/ops/restore-postgres.sh backups/postgres/postgres-YYYYMMDD-HHMMSS.dump
-```
-
-Only use in-place restore during a deliberate incident recovery. Do not use test reset tooling for production restore.
-
-## Media Backup
-
-Create a tar archive of the API media volume:
+Media backup:
 
 ```sh
 infra/ops/backup-media.sh
 ```
 
-Default output:
-
-```text
-backups/media/media-YYYYMMDD-HHMMSS.tar.gz
-```
-
-The script reads the `api_prod_media` Docker volume through a temporary container and does not stop the stack.
-
-## Media Restore Verification
-
-Verify a media archive into a separate Docker volume:
+Media restore verification into a separate Docker volume:
 
 ```sh
 infra/ops/restore-media.sh backups/media/media-YYYYMMDD-HHMMSS.tar.gz
 ```
 
-The script validates archive paths and rejects absolute paths or `..` traversal. By default it restores into:
+Use restore-verification targets before considering an in-place production restore.
+
+A production restore is an incident-recovery action, not a deployment step.
+
+## Normal Deployment Procedure
+
+Run production commands only on the VPS unless a step explicitly says LOCAL.
+
+### 1. LOCAL — finish and review code first
+
+The intended code workflow remains:
 
 ```text
-<compose_project>_media_restore_verify
+feature branch -> implementation -> review -> acceptance -> merge to master
 ```
 
-To deliberately replace production media contents:
+Do not deploy arbitrary local/unreviewed state.
+
+### 2. SERVER — create a production backup
 
 ```sh
-ALLOW_MEDIA_REPLACE=yes infra/ops/restore-media.sh backups/media/media-YYYYMMDD-HHMMSS.tar.gz
+cd /opt/cakeshape
+/usr/local/sbin/cakeshape-backup
 ```
 
-Replacement clears only the target media volume before extracting the archive. It does not remove Docker volumes.
+Confirm that the backup completed before continuing.
 
-## Rollback
-
-Application rollback and database rollback are separate decisions.
-
-- A previous reviewed Git revision or image can be redeployed.
-- Alembic downgrade should not be assumed safe.
-- If a migration is not backward-compatible, recovery may require restoring a PostgreSQL backup.
-- A production database restore must be deliberate and should be rehearsed through restore verification first.
-
-## Operations Commands
+### 3. SERVER — verify repository state
 
 ```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml ps
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 nginx
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 public
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 admin
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 api
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 postgres
-docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 migrate
-docker compose --env-file .env.production -f docker-compose.prod.yml restart api
-docker compose --env-file .env.production -f docker-compose.prod.yml restart nginx
+cd /opt/cakeshape
+git status --short
+git log --oneline -5
+```
+
+The production checkout should be clean before pulling.
+
+### 4. SERVER — pull the approved revision
+
+```sh
+git pull --ff-only
+```
+
+Do not use `git reset --hard` as a routine deployment command.
+
+### 5. SERVER — validate Compose configuration
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production config >/dev/null && echo "COMPOSE OK"
+```
+
+Stop if configuration validation fails.
+
+### 6. SERVER — build and apply the production stack
+
+For a normal approved release:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+The production dependency chain requires PostgreSQL health and successful migration before dependent application services become ready.
+
+For a narrowly scoped Nginx-only change, use a narrow recreate instead of rebuilding unrelated application services:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-deps --force-recreate nginx
+```
+
+Use the narrowest safe deployment command for the actual change.
+
+### 7. SERVER — verify containers
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production ps -a
+```
+
+If a service is unhealthy or exited unexpectedly, inspect logs before proceeding.
+
+### 8. SERVER — smoke test
+
+```sh
+curl -I https://cakeshape.ru
+curl -I https://admin.cakeshape.ru
+curl -i https://cakeshape.ru/api/health
+curl -I http://cakeshape.ru
+```
+
+### 9. BROWSER — final user smoke
+
+Verify at minimum:
+
+- homepage;
+- catalog/filtering;
+- several dessert cards/details;
+- media/images;
+- admin login;
+- relevant admin section changed by the release.
+
+Do not make unnecessary production mutations merely to prove that the site is alive.
+
+## Logs
+
+```sh
+cd /opt/cakeshape
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 nginx
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 public
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 admin
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 api
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 postgres
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 migrate
+```
+
+## Safe Restarts
+
+Restart one service only when that is sufficient:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production restart api
+docker compose -f docker-compose.prod.yml --env-file .env.production restart nginx
+```
+
+For Certbot post-renewal, start only the existing Nginx container rather than bringing up the whole dependency chain:
+
+```sh
+docker start cakeshape_prod-nginx-1
+```
+
+## Rollback Guidance
+
+Application rollback and data rollback are separate decisions.
+
+- A previous reviewed Git revision can be redeployed if application code must be rolled back.
+- Preserve logs and evidence before changing revision during an incident.
+- Never assume an Alembic downgrade is safe.
+- If a migration changed data/schema incompatibly, recovery may require restoring the fresh pre-deploy PostgreSQL backup.
+- Media rollback may be independent of database rollback.
+- Restore into a verification target first whenever the incident allows time.
+- Do not restore a local/pre-production snapshot over production simply to match code history.
+
+## Common Failure Checks
+
+### Public/admin unavailable
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production ps -a
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 nginx
+```
+
+### API unavailable
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 api
+curl -i https://cakeshape.ru/api/health
+```
+
+### Admin unhealthy
+
+The admin health check intentionally uses IPv4 loopback:
+
+```text
+http://127.0.0.1/health
+```
+
+Do not change it back to `http://localhost/health` without re-validating container name resolution/listening behavior.
+
+### TLS problem
+
+```sh
+certbot certificates
+systemctl status certbot.timer --no-pager
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail=200 nginx
+```
+
+Check that the certificate paths exist and are readable on the host:
+
+```sh
+test -r /etc/letsencrypt/live/cakeshape.ru/fullchain.pem && echo "FULLCHAIN OK"
+test -r /etc/letsencrypt/live/cakeshape.ru/privkey.pem && echo "PRIVATE KEY OK"
+```
+
+### Disk pressure
+
+```sh
+df -h
 docker system df
-docker volume ls
+du -sh /var/backups/cakeshape
 ```
 
-## Launch Blockers And Next Pass Decisions
+Do not delete Docker volumes to recover disk space without an explicit recovery plan.
 
-- TLS is not provisioned yet. A later pass must configure HTTPS certificates and port `443`.
-- DNS must point the public and admin domains at the VPS before launch.
-- Production notification provider remains a launch decision.
-- Currency remains a separate launch decision.
-- Off-host encrypted backup storage must be selected and operated outside this repository.
+## Production Data Rule
+
+After the 2026-08-10 launch, the production database and media are authoritative.
+
+Future releases move code and safe migrations forward. They do not re-import the original local catalog snapshot over live production data.
+
+## Post-Launch Operations Backlog
+
+Immediate next infrastructure priority:
+
+1. encrypted off-site backups;
+2. periodic restore drill from an off-site copy;
+3. ongoing monitoring of disk usage, certificate renewal and backup timer results;
+4. later hardening/operational improvements only when justified by observed production needs.
