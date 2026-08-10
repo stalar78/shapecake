@@ -1,19 +1,48 @@
-import Link from "next/link";
 import Image from "next/image";
 import type { SiteSettings } from "@cake-and-shape/api-client";
+import { ContactIcon, type ContactIconName, phoneHref, socialContact } from "./ContactIcon";
+
+type FooterContact =
+  | {
+      href: string;
+      icon: ContactIconName;
+      label: string;
+      detail: string;
+      external: boolean;
+    }
+  | {
+      icon: ContactIconName;
+      label: string;
+      detail: string;
+    };
 
 export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
-  const phoneHref = phoneLink(settings?.phone);
-  const socials = [
-    ["WhatsApp", settings?.whatsapp_url],
-    ["Telegram", settings?.telegram_url],
-    ["Соцсеть", settings?.social_url],
-  ].filter((item): item is [string, string] => Boolean(item[1]));
+  const telHref = phoneHref(settings?.phone);
+  const social = socialContact(settings?.social_url);
+  const contacts: FooterContact[] = [
+    settings?.phone && telHref
+      ? { href: telHref, icon: "phone", label: "Телефон", detail: settings.phone, external: false }
+      : { icon: "phone", label: "Телефон", detail: "Не указан" },
+    settings?.email
+      ? { href: `mailto:${settings.email}`, icon: "email", label: "Почта", detail: settings.email, external: false }
+      : { icon: "email", label: "Почта", detail: "Не указан" },
+    { icon: "location", label: "Адрес", detail: settings?.address_text || "Не указан" },
+    { icon: "clock", label: "Часы работы", detail: settings?.working_hours_text || "Не указаны" },
+  ];
+  if (settings?.whatsapp_url) {
+    contacts.push({ href: settings.whatsapp_url, icon: "whatsapp", label: "WhatsApp", detail: "Написать в WhatsApp", external: true });
+  }
+  if (settings?.telegram_url) {
+    contacts.push({ href: settings.telegram_url, icon: "telegram", label: "Telegram", detail: "Написать в Telegram", external: true });
+  }
+  if (social) {
+    contacts.push({ href: social.href, icon: social.icon, label: social.label, detail: "Открыть профиль", external: true });
+  }
 
   return (
     <footer id="contacts" className="mt-24 bg-[var(--foreground)] py-14 text-[var(--surface)]">
       <div className="public-shell">
-        <div className="grid gap-12 lg:grid-cols-[1.25fr_0.75fr_0.85fr]">
+        <div className="grid gap-12 lg:grid-cols-[1.15fr_1fr]">
           <div>
             <Image
               alt=""
@@ -31,50 +60,40 @@ export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
               Связаться с Cake &amp; Shape можно удобным способом ниже.
             </p>
           </div>
-          <dl className="grid content-start gap-5 text-sm">
-            <div>
-              <dt className="font-bold text-[var(--champagne)]">Телефон</dt>
-              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">
-                {settings?.phone && phoneHref ? (
-                  <a className="transition-colors hover:text-[var(--surface)]" href={phoneHref}>
-                    {settings.phone}
-                  </a>
-                ) : (
-                  "Не указан"
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-bold text-[var(--champagne)]">Email</dt>
-              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">
-                {settings?.email ? (
-                  <a className="transition-colors hover:text-[var(--surface)]" href={`mailto:${settings.email}`}>
-                    {settings.email}
-                  </a>
-                ) : (
-                  "Не указан"
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="font-bold text-[var(--champagne)]">Адрес</dt>
-              <dd className="mt-1 whitespace-pre-wrap text-[rgba(250,247,242,0.72)]">{settings?.address_text || "Не указан"}</dd>
-            </div>
-          </dl>
-          <div className="grid content-start gap-5 text-sm">
-            <p>
-              <strong className="text-[var(--champagne)]">Часы работы</strong>
-              <span className="mt-1 block whitespace-pre-wrap text-[rgba(250,247,242,0.72)]">{settings?.working_hours_text || "Не указаны"}</span>
-            </p>
-            <div className="flex flex-wrap gap-x-5 gap-y-2">
-              {socials.map(([label, href]) => (
-                <Link className="quiet-link text-[var(--surface)]" href={href} key={href}>
-                  {label}
-                </Link>
-              ))}
-            </div>
+
+          <div className="grid content-start gap-3 sm:grid-cols-2">
+            {contacts.map((contact) =>
+              "href" in contact ? (
+                <a
+                  className="group grid grid-cols-[auto_1fr] gap-4 border border-white/12 bg-white/5 p-4 text-left transition-colors hover:border-[var(--champagne)] hover:bg-white/8"
+                  href={contact.href}
+                  key={contact.label}
+                  rel={contact.external ? "noopener noreferrer" : undefined}
+                  target={contact.external ? "_blank" : undefined}
+                >
+                  <span className="mt-1 flex size-10 items-center justify-center border border-white/12 text-[var(--champagne)] transition-colors group-hover:border-[var(--champagne)]">
+                    <ContactIcon name={contact.icon} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-[var(--surface)]">{contact.label}</span>
+                    <span className="mt-1 block whitespace-pre-wrap text-sm leading-6 text-[rgba(250,247,242,0.72)]">{contact.detail}</span>
+                  </span>
+                </a>
+              ) : (
+                <div className="grid grid-cols-[auto_1fr] gap-4 border border-white/12 bg-white/5 p-4" key={contact.label}>
+                  <span className="mt-1 flex size-10 items-center justify-center border border-white/12 text-[var(--champagne)]">
+                    <ContactIcon name={contact.icon} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-[var(--surface)]">{contact.label}</span>
+                    <span className="mt-1 block whitespace-pre-wrap text-sm leading-6 text-[rgba(250,247,242,0.72)]">{contact.detail}</span>
+                  </span>
+                </div>
+              ),
+            )}
           </div>
         </div>
+
         <div className="mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-xs text-[rgba(250,247,242,0.55)] md:flex-row md:items-center md:justify-between">
           <p>© Cake &amp; Shape</p>
           <a className="w-fit transition-colors hover:text-[var(--surface)] md:text-right" href="https://stalarvision.ru/" target="_blank" rel="noopener noreferrer">
@@ -84,9 +103,4 @@ export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
       </div>
     </footer>
   );
-}
-
-function phoneLink(phone?: string) {
-  const normalized = phone?.replace(/[^\d+]/g, "");
-  return normalized ? `tel:${normalized}` : null;
 }
