@@ -130,11 +130,22 @@ function App() {
       await loadWorkspace()
       return true
     } catch (error) {
+      if (isUnauthorizedError(error)) {
+        handleExpiredSession()
+        return false
+      }
       setWorkspaceError(describeError(error, 'Не удалось загрузить данные панели управления.'))
       return false
     } finally {
       setWorkspaceLoading(false)
     }
+  }
+
+  function handleExpiredSession() {
+    resetWorkspaceState()
+    setAuthError('Сеанс истёк. Войдите снова, чтобы продолжить.')
+    setMessage('')
+    setMessageTone('error')
   }
 
   function resetWorkspaceState() {
@@ -155,7 +166,7 @@ function App() {
     setWorkspaceError('')
   }
 
-  async function run(action: () => Promise<void>, success: string) {
+  async function run(action: () => Promise<void>, success: string, formatError = (error: unknown) => describeError(error, 'Запрос не выполнен.')) {
     setMessage('')
     try {
       await action()
@@ -165,8 +176,12 @@ function App() {
         setMessageTone('success')
       }
     } catch (error) {
+      if (isUnauthorizedError(error)) {
+        handleExpiredSession()
+        return
+      }
       setMessageTone('error')
-      setMessage(describeError(error, 'Запрос не выполнен.'))
+      setMessage(formatError(error))
     }
   }
 
@@ -190,10 +205,18 @@ function App() {
   }
 
   async function handleLogout() {
-    await api.logout()
-    setMessage('')
-    setAuthError('')
-    resetWorkspaceState()
+    let nextAuthError = ''
+    try {
+      await api.logout()
+    } catch (error) {
+      nextAuthError = isUnauthorizedError(error)
+        ? 'Сеанс истёк. Войдите снова, чтобы продолжить.'
+        : describeError(error, 'Выход не выполнен.')
+    } finally {
+      resetWorkspaceState()
+      setMessage('')
+      setAuthError(nextAuthError)
+    }
   }
 
   if (loading) {
@@ -444,7 +467,7 @@ function SettingsPanel({
   run,
 }: {
   settings: SiteSettings
-  run: (action: () => Promise<void>, success: string) => Promise<void>
+  run: (action: () => Promise<void>, success: string, formatError?: (error: unknown) => string) => Promise<void>
 }) {
   const aboutMasterImageInputRef = useRef<HTMLInputElement | null>(null)
   const craftImageInputRef = useRef<HTMLInputElement | null>(null)
@@ -466,6 +489,17 @@ function SettingsPanel({
     }
   }
 
+  function siteSettingsErrorMessage(error: unknown) {
+    if (error instanceof ApiError && error.status === 422) {
+      const messages = siteSettingsValidationMessages(error.detail)
+      if (messages.length) {
+        return messages.join(' ')
+      }
+      return 'Проверьте ссылки и контактные данные в настройках сайта.'
+    }
+    return describeError(error, 'Запрос не выполнен.')
+  }
+
   return (
     <section className="card stack wide">
       <div>
@@ -477,10 +511,16 @@ function SettingsPanel({
         onSubmit={(event) => {
           event.preventDefault()
           const form = new FormData(event.currentTarget)
-          void run(
-            () => api.updateSiteSettings(siteSettingsPayload(form)).then(() => undefined),
-            'Настройки сайта сохранены.',
-          )
+          try {
+            const payload = siteSettingsPayload(form)
+            void run(
+              () => api.updateSiteSettings(payload).then(() => undefined),
+              'Настройки сайта сохранены.',
+              siteSettingsErrorMessage,
+            )
+          } catch (error) {
+            void run(() => Promise.reject(error), 'Настройки сайта сохранены.', siteSettingsErrorMessage)
+          }
         }}
       >
         <div className="inline-form">
@@ -497,7 +537,7 @@ function SettingsPanel({
             <p className="muted">Загрузите изображение для блока «Ремесло» на главной странице.</p>
           </div>
           {settings.craft_image_url ? (
-            <div className="image-frame">
+            <div className="image-frame site-settings-image-preview">
               <img alt="Авторская работа Cake & Shape" src={adminMediaUrl(settings.craft_image_url)} />
             </div>
           ) : (
@@ -519,7 +559,7 @@ function SettingsPanel({
             <p className="muted">Загрузите портрет или другое изображение для блока на главной странице.</p>
           </div>
           {settings.about_master_image_url ? (
-            <div className="image-frame">
+            <div className="image-frame site-settings-image-preview">
               <img alt="Кондитер Cake & Shape" src={adminMediaUrl(settings.about_master_image_url)} />
             </div>
           ) : (
@@ -537,7 +577,7 @@ function SettingsPanel({
         </section>
         <div className="inline-form">
           <input name="whatsapp_url" defaultValue={settings.whatsapp_url} placeholder="Ссылка WhatsApp" />
-          <input name="telegram_url" defaultValue={settings.telegram_url} placeholder="Ссылка Telegram" />
+          <input name="telegram_url" defaultValue={settings.telegram_url} placeholder="Telegram: @username или https://t.me/username" />
           <input name="social_url" defaultValue={settings.social_url} placeholder="Ссылка на соцсеть" />
         </div>
         <textarea name="address_text" defaultValue={settings.address_text} placeholder="Адрес" />
@@ -1697,6 +1737,7 @@ function promotionPayload(form: FormData): Partial<AdminPromotion> {
 }
 
 function siteSettingsPayload(form: FormData): Partial<SiteSettings> {
+  const telegramUrl = normalizeTelegramUrl(String(form.get('telegram_url') ?? ''))
   return {
     hero_title: String(form.get('hero_title') ?? ''),
     hero_text: String(form.get('hero_text') ?? ''),
@@ -1705,7 +1746,7 @@ function siteSettingsPayload(form: FormData): Partial<SiteSettings> {
     phone: String(form.get('phone') ?? ''),
     email: String(form.get('email') ?? ''),
     whatsapp_url: String(form.get('whatsapp_url') ?? ''),
-    telegram_url: String(form.get('telegram_url') ?? ''),
+    telegram_url: telegramUrl,
     social_url: String(form.get('social_url') ?? ''),
     address_text: String(form.get('address_text') ?? ''),
     working_hours_text: String(form.get('working_hours_text') ?? ''),
@@ -1781,6 +1822,113 @@ function describeError(error: unknown, fallback: string) {
     return error.message || fallback
   }
   return fallback
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof ApiError && error.status === 401
+}
+
+function normalizeTelegramUrl(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return ''
+  }
+  if (/^https:\/\/t\.me\/[A-Za-z0-9_]{5,32}$/.test(trimmed)) {
+    return trimmed
+  }
+  const handle = trimmed.match(/^@([A-Za-z0-9_]{5,32})$/)
+  if (handle) {
+    return `https://t.me/${handle[1]}`
+  }
+  return trimmed
+}
+
+function validationFieldLabel(field: string) {
+  switch (field) {
+    case 'telegram_url':
+      return 'Telegram'
+    case 'whatsapp_url':
+      return 'WhatsApp'
+    case 'phone':
+      return 'Телефон'
+    case 'email':
+      return 'Email'
+    case 'social_url':
+      return 'Соцсеть'
+    default:
+      return ''
+  }
+}
+
+function siteSettingsValidationMessages(detail: unknown) {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((issue) => {
+        const field = validationIssueField(issue)
+        return field ? contactFieldCorrection(field) : ''
+      })
+      .filter((message, index, messages) => Boolean(message) && messages.indexOf(message) === index)
+  }
+  if (typeof detail === 'object' && detail) {
+    return Object.entries(detail as Record<string, unknown>)
+      .map(([field, value]) => {
+        const correction = contactFieldCorrection(field)
+        if (correction) {
+          return correction
+        }
+        const text = firstValidationMessage(value)
+        if (!text) {
+          return null
+        }
+        return validationFieldLabel(field) ? `${validationFieldLabel(field)}: ${text}` : text
+      })
+      .filter((item): item is string => Boolean(item))
+  }
+  return []
+}
+
+function validationIssueField(issue: unknown) {
+  if (typeof issue !== 'object' || !issue) {
+    return ''
+  }
+  const loc = (issue as { loc?: unknown }).loc
+  if (!Array.isArray(loc)) {
+    return ''
+  }
+  return loc.findLast((part): part is string => typeof part === 'string') ?? ''
+}
+
+function contactFieldCorrection(field: string) {
+  switch (field) {
+    case 'telegram_url':
+      return 'Telegram: укажите @username или полную ссылку https://t.me/username.'
+    case 'whatsapp_url':
+      return 'WhatsApp: укажите полную HTTPS-ссылку.'
+    case 'social_url':
+      return 'Соцсеть: укажите полную HTTPS-ссылку.'
+    case 'email':
+      return 'Email: проверьте адрес электронной почты.'
+    default:
+      return ''
+  }
+}
+
+function firstValidationMessage(value: unknown): string {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (Array.isArray(value)) {
+    return value.find((item): item is string => typeof item === 'string') ?? ''
+  }
+  if (typeof value === 'object' && value) {
+    for (const nested of Object.values(value as Record<string, unknown>)) {
+      const message = firstValidationMessage(nested)
+      if (message) {
+        return message
+      }
+    }
+  }
+  return ''
 }
 
 export default App
