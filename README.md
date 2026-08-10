@@ -4,24 +4,27 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stages 01-09 are accepted. The MVP is deployed to production and the project has moved from launch preparation to controlled post-launch operations.
+Stages 01-10 are accepted. The MVP is live in production and the project is in controlled post-launch operations.
 
 Production endpoints:
 
-- public: `https://cakeshape.ru`;
-- public alias: `https://www.cakeshape.ru`;
+- public canonical host: `https://cakeshape.ru`;
+- `https://www.cakeshape.ru` redirects canonically to `https://cakeshape.ru`;
 - admin: `https://admin.cakeshape.ru`;
 - API health: `https://cakeshape.ru/api/health`.
 
-The first post-launch infrastructure priority is off-site backup storage so that production backups do not live only on the same VPS as the application.
+Stage 10 converted the public ordering UX from an on-site personal-data inquiry form to direct contact through configured business channels. The accepted inquiry backend/admin subsystem remains in the codebase but is dormant from the public website.
+
+Off-site backup replication is currently deferred by owner decision. Daily PostgreSQL/media backups remain on the production VPS with 14-day retention; total VPS loss therefore remains an explicitly accepted operational risk until an off-site layer is added.
 
 ## Approved MVP
 
 - public responsive website;
 - dynamic dessert catalog and detail pages;
+- direct-contact ordering flow using configured phone/email/messenger/social settings;
 - custom administration application;
 - dessert, category, price variant, review, promotion and site-settings management;
-- customer inquiry/order-request workflow with status handling;
+- retained inquiry/order-request backend and admin workflow for possible future reuse;
 - secure media uploads;
 - PostgreSQL-backed FastAPI API;
 - Next.js public frontend;
@@ -71,6 +74,8 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - notification adapter boundary whose failure cannot lose accepted inquiries;
 - shared typed API client, public inquiry form and admin inquiry interface;
 - Stage 03 PostgreSQL migration, comprehensive integration tests, Docker builds and live runtime verification.
+
+Stage 10 superseded only the public inquiry UX: the public form was removed, while the Stage 03 backend/admin domain remains retained and dormant for possible future reuse.
 
 ## Stage 04 reviews and promotions
 
@@ -123,7 +128,7 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - reusable public header, footer and dessert-card components were introduced;
 - homepage, dessert detail, promotion detail and inquiry presentation were redesigned around real API-backed data only;
 - customer-facing copy was cleaned of implementation/developer language and no Lovable mock business facts were imported;
-- the real inquiry API flow, validation, variant availability filtering, rate/duplicate error handling and public-reference success state were preserved;
+- the real inquiry API flow, validation, variant availability filtering, rate/duplicate error handling and public-reference success state were preserved at that stage;
 - Stage 07 metadata, canonical URLs, Open Graph, JSON-LD, analytics, robots and sitemap behavior remain intact;
 - public lint, typecheck and production build passed before acceptance;
 - merge commit: `0d3f851`.
@@ -144,15 +149,31 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - production launch accepted on 2026-08-10;
 - production HTTPS baseline commit: `2567c6a`.
 
-See `docs/STAGE_09_ACCEPTANCE.md` and `docs/PRODUCTION_RUNBOOK.md` for the production acceptance record and operating procedure.
+## Stage 10 post-launch UX and privacy minimization
+
+- public inquiry form removed from homepage and dessert detail pages;
+- ordering now routes visitors to direct business contacts from `SiteSettings` without collecting inquiry form data on the public site;
+- retained inquiry API/database/admin/history were intentionally not deleted;
+- branded favicon plus branded 404 and runtime error surfaces added;
+- footer phone/email made actionable and `www.cakeshape.ru` made a canonical redirect to the apex host;
+- admin expired-session UX now clears stale authenticated state on `401` without weakening HttpOnly/CSRF/session-timeout security;
+- Telegram settings accept `@username` and normalize it to `https://t.me/username`, while backend HTTPS validation remains strict;
+- Site Settings image previews were constrained for usable 100% browser zoom without changing dessert image cards;
+- public contact CTA/footer were unified into premium icon contact cards;
+- WhatsApp/Telegram/social links open externally, phone remains semantic `tel:`, email remains `mailto:`;
+- `social_url` is rendered as Instagram when it points to `instagram.com`, otherwise as a generic social profile;
+- production visual/behavior acceptance completed on 2026-08-10;
+- final contact presentation merge commit: `2caf9ea`.
+
+See `docs/STAGE_09_ACCEPTANCE.md`, `docs/STAGE_10_ACCEPTANCE.md` and `docs/PRODUCTION_RUNBOOK.md` for the production acceptance records and operating procedure.
 
 ## Working model
 
-GPT acts as project architect and maintains project documentation and GitHub history. Codex handles complex implementation tasks. Lovable provides the visual design reference for the public application.
+GPT acts as project architect and maintains project documentation and GitHub history. Codex handles complex/security-sensitive implementation tasks. SourceCraft/Copilot handle narrow frontend or documentation tasks. Lovable provides the visual design reference for the public application.
 
 Implementation workflow for substantial stages: feature branch -> agent implementation -> push -> GPT GitHub review -> fixes in the same branch -> acceptance -> merge to `master`.
 
-Production operations follow a stricter sequence: production backup -> approved revision -> configuration validation -> migration/build/recreate -> health checks -> browser smoke -> rollback decision if required.
+Production operations follow a stricter sequence: production backup -> approved revision -> configuration validation -> narrowest safe build/recreate -> health checks -> browser smoke -> rollback decision if required.
 
 ## Local project path
 

@@ -4,7 +4,7 @@ This runbook describes the accepted Cake & Shape production deployment and the o
 
 ## Production Baseline
 
-Production launch was accepted on 2026-08-10.
+Production launch was accepted on 2026-08-10. Stage 10 post-launch UX/contact refinements were accepted in production on the same date.
 
 - VPS hostname: `cakeshape-prod`.
 - VPS public IPv4: `159.194.228.151`.
@@ -12,8 +12,8 @@ Production launch was accepted on 2026-08-10.
 - Production Compose project: `cakeshape_prod`.
 - Production Compose file: `docker-compose.prod.yml`.
 - Production environment file: `/opt/cakeshape/.env.production`.
-- Public site: `https://cakeshape.ru`.
-- Public alias: `https://www.cakeshape.ru`.
+- Public canonical site: `https://cakeshape.ru`.
+- Public `www` host: `https://www.cakeshape.ru`, canonical redirect to the apex host.
 - Admin site: `https://admin.cakeshape.ru`.
 - API health: `https://cakeshape.ru/api/health`.
 - Internet-facing service: Docker `nginx` on ports `80` and `443`.
@@ -31,6 +31,7 @@ Never run `docker compose down -v` in production.
 - Session cookies remain HttpOnly and production sessions use secure cookies.
 - Mutating admin endpoints remain CSRF-protected.
 - Authentication tokens are never stored in localStorage.
+- An authenticated admin workspace receiving API `401` must clear stale local auth state and return to login; `403` is not treated as session expiry.
 - PostgreSQL is not published to the public network.
 - Test reset tooling is never used against production.
 - Certificates/private keys are not committed to Git.
@@ -56,7 +57,7 @@ Next.js public   Vite admin       FastAPI
                                    +--> persistent media volume
 ```
 
-Nginx routes the public host to the Next.js service, the admin host to the admin service, and `/api/` traffic to FastAPI.
+Nginx routes the apex public host to the Next.js service, the admin host to the admin service, and `/api/` traffic to FastAPI. `www.cakeshape.ru` is intentionally a canonical redirect to `https://cakeshape.ru` rather than a second public origin.
 
 ## DNS
 
@@ -77,6 +78,18 @@ Resolve-DnsName cakeshape.ru -Type A
 Resolve-DnsName www.cakeshape.ru -Type A
 Resolve-DnsName admin.cakeshape.ru -Type A
 ```
+
+## Canonical Host Behavior
+
+Accepted production redirect behavior:
+
+```text
+http://cakeshape.ru/...      -> 301 https://cakeshape.ru/...
+http://www.cakeshape.ru/...  -> 301 https://cakeshape.ru/...
+https://www.cakeshape.ru/... -> 301 https://cakeshape.ru/...
+```
+
+Query strings and paths are preserved by the redirect.
 
 ## TLS / Let's Encrypt
 
@@ -159,6 +172,7 @@ External smoke:
 
 ```sh
 curl -I https://cakeshape.ru
+curl -I https://www.cakeshape.ru/test-path?source=smoke
 curl -I https://admin.cakeshape.ru
 curl -i https://cakeshape.ru/api/health
 curl -I http://cakeshape.ru
@@ -166,10 +180,11 @@ curl -I http://cakeshape.ru
 
 Expected:
 
-- public HTTPS: `200`;
+- public apex HTTPS: `200`;
+- public `www` HTTPS: `301` to the same path/query on `https://cakeshape.ru`;
 - admin HTTPS: `200`;
 - API health: `200` with `{"status":"ok"}`;
-- HTTP: `301` to HTTPS.
+- apex HTTP: `301` to HTTPS apex.
 
 ## Administrator Bootstrap
 
@@ -264,13 +279,13 @@ systemctl start cakeshape-backup.service
 
 For a successful oneshot service, `inactive (dead)` after completion is normal when the process exited with `status=0/SUCCESS`.
 
-## Off-Site Backup Requirement
+## Off-Site Backup Status
 
 The current automatic backups are stored on the same VPS as production. They protect against accidental database changes, failed deployments, bad migrations, and damaged Docker volumes, but they do not protect against total VPS loss.
 
-The first post-launch infrastructure priority is to copy encrypted production backups to storage outside `159.194.228.151`.
+Encrypted off-site backup replication has been discussed and is intentionally deferred by owner decision at this time. Do not describe it as already implemented. The absence of an off-site copy is an accepted operational risk until the owner chooses an external storage/provider approach.
 
-Until off-site backup is implemented, VPS/provider snapshots are useful only as a supplementary layer and must not be treated as the sole backup strategy.
+VPS/provider snapshots may be used as a supplementary layer but should not be confused with an independent tested backup copy.
 
 ## Repository Backup / Restore Utilities
 
@@ -363,13 +378,20 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d --bui
 
 The production dependency chain requires PostgreSQL health and successful migration before dependent application services become ready.
 
-For a narrowly scoped Nginx-only change, use a narrow recreate instead of rebuilding unrelated application services:
+Use the narrowest safe deployment command for the actual change. Examples for frontend-only releases that do not require API, database, migration or Nginx changes:
+
+```sh
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build --no-deps public
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build --no-deps admin
+```
+
+For a narrowly scoped Nginx-only change, validate Nginx configuration before reload/recreate. A narrow recreate can be used instead of rebuilding unrelated application services:
 
 ```sh
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --no-deps --force-recreate nginx
 ```
 
-Use the narrowest safe deployment command for the actual change.
+Do not rebuild unrelated services merely for consistency.
 
 ### 7. SERVER — verify containers
 
@@ -383,6 +405,7 @@ If a service is unhealthy or exited unexpectedly, inspect logs before proceeding
 
 ```sh
 curl -I https://cakeshape.ru
+curl -I https://www.cakeshape.ru/test-path?source=smoke
 curl -I https://admin.cakeshape.ru
 curl -i https://cakeshape.ru/api/health
 curl -I http://cakeshape.ru
@@ -397,7 +420,13 @@ Verify at minimum:
 - several dessert cards/details;
 - media/images;
 - admin login;
-- relevant admin section changed by the release.
+- relevant public/admin surface changed by the release.
+
+For public contact releases, verify the configured contact-card behavior without inventing business contact data:
+
+- external WhatsApp/Telegram/social links open as external links;
+- `tel:` remains a semantic telephone link and may be handled by whichever application the user's operating system has registered for the `tel:` scheme;
+- `mailto:` remains an email link.
 
 Do not make unnecessary production mutations merely to prove that the site is alive.
 
@@ -466,6 +495,12 @@ http://127.0.0.1/health
 
 Do not change it back to `http://localhost/health` without re-validating container name resolution/listening behavior.
 
+### Admin shows authentication-required state after sitting open
+
+The accepted admin behavior on an expired server session is to clear the stale authenticated workspace and return to the login screen with a clear session-expired message. Do not weaken session timeout or bypass CSRF to avoid this flow.
+
+If an operator sees an old/stale admin bundle after a deployment, verify that the `admin` container was rebuilt from the approved revision before changing backend authentication settings.
+
 ### TLS problem
 
 ```sh
@@ -499,9 +534,11 @@ Future releases move code and safe migrations forward. They do not re-import the
 
 ## Post-Launch Operations Backlog
 
-Immediate next infrastructure priority:
+Current priorities are production stability and client-driven content/configuration updates.
 
-1. encrypted off-site backups;
-2. periodic restore drill from an off-site copy;
-3. ongoing monitoring of disk usage, certificate renewal and backup timer results;
-4. later hardening/operational improvements only when justified by observed production needs.
+Tracked deferred/operational items:
+
+1. encrypted off-site backup replication — explicitly deferred for now;
+2. periodic restore drill from an off-site copy — applicable after an off-site layer exists;
+3. ongoing observation of disk usage, certificate renewal and backup timer results;
+4. additional monitoring/hardening only when justified by observed production needs.

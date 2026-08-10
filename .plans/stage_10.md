@@ -1,5 +1,13 @@
 # Stage 10 Plan — Post-launch UX and Privacy Minimization
 
+## Status
+
+Accepted in production on `2026-08-10`.
+
+Acceptance record: `docs/STAGE_10_ACCEPTANCE.md`.
+
+The plan below is preserved as the implementation intent. The accepted stage ultimately included the direct-contact conversion, branded public polish, canonical host behavior, admin operational UX fixes and the final contact-card presentation pass. A separate new privacy/logging subsystem was not introduced; the privacy-minimization decision was to remove the public inquiry form while retaining the existing backend/admin inquiry domain for possible future reuse.
+
 ## Goal
 
 Refine the launched Cake & Shape website as a public catalog rather than a client-data intake system, while preserving the accepted production backend and administration architecture.
@@ -85,18 +93,21 @@ Manually verify at minimum:
 - catalog filtering and dessert detail still work;
 - responsive layout has no obvious regressions.
 
-## Later Stage 10 passes
+## Accepted later Stage 10 passes
 
-After Pass 10.1 is accepted, continue with narrow post-launch polish passes:
+After Pass 10.1, the accepted production stage also delivered:
 
-1. branded favicon/app icons;
+1. branded favicon/app icon;
 2. branded 404 page;
 3. branded runtime error page;
 4. clickable footer phone/email and contact polish;
 5. canonical `www.cakeshape.ru` redirect to the apex domain;
-6. technical privacy/logging review.
+6. expired-session/admin settings UX fixes without changing the authentication security model;
+7. Telegram handle normalization and friendlier site-settings validation feedback;
+8. constrained Craft/About image previews in Site Settings;
+9. unified premium contact-card presentation with restrained inline SVG icons and Instagram detection through `social_url`.
 
-Each pass should stay small and reviewable.
+The public form removal is a privacy-minimization measure, not a claim that the entire deployment no longer processes any potentially identifying operational data. Normal infrastructure/access-log and future-integration considerations remain.
 
 ## Security and production invariants
 
