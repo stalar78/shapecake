@@ -130,11 +130,22 @@ function App() {
       await loadWorkspace()
       return true
     } catch (error) {
+      if (isUnauthorizedError(error)) {
+        handleExpiredSession()
+        return false
+      }
       setWorkspaceError(describeError(error, 'Не удалось загрузить данные панели управления.'))
       return false
     } finally {
       setWorkspaceLoading(false)
     }
+  }
+
+  function handleExpiredSession() {
+    resetWorkspaceState()
+    setAuthError('Сеанс истёк. Войдите снова, чтобы продолжить.')
+    setMessage('')
+    setMessageTone('error')
   }
 
   function resetWorkspaceState() {
@@ -165,6 +176,10 @@ function App() {
         setMessageTone('success')
       }
     } catch (error) {
+      if (isUnauthorizedError(error)) {
+        handleExpiredSession()
+        return
+      }
       setMessageTone('error')
       setMessage(describeError(error, 'Запрос не выполнен.'))
     }
@@ -190,10 +205,18 @@ function App() {
   }
 
   async function handleLogout() {
-    await api.logout()
-    setMessage('')
-    setAuthError('')
-    resetWorkspaceState()
+    let nextAuthError = ''
+    try {
+      await api.logout()
+    } catch (error) {
+      nextAuthError = isUnauthorizedError(error)
+        ? 'Сеанс истёк. Войдите снова, чтобы продолжить.'
+        : describeError(error, 'Выход не выполнен.')
+    } finally {
+      resetWorkspaceState()
+      setMessage('')
+      setAuthError(nextAuthError)
+    }
   }
 
   if (loading) {
@@ -497,7 +520,7 @@ function SettingsPanel({
             <p className="muted">Загрузите изображение для блока «Ремесло» на главной странице.</p>
           </div>
           {settings.craft_image_url ? (
-            <div className="image-frame">
+            <div className="image-frame site-settings-image-preview">
               <img alt="Авторская работа Cake & Shape" src={adminMediaUrl(settings.craft_image_url)} />
             </div>
           ) : (
@@ -519,7 +542,7 @@ function SettingsPanel({
             <p className="muted">Загрузите портрет или другое изображение для блока на главной странице.</p>
           </div>
           {settings.about_master_image_url ? (
-            <div className="image-frame">
+            <div className="image-frame site-settings-image-preview">
               <img alt="Кондитер Cake & Shape" src={adminMediaUrl(settings.about_master_image_url)} />
             </div>
           ) : (
@@ -1781,6 +1804,10 @@ function describeError(error: unknown, fallback: string) {
     return error.message || fallback
   }
   return fallback
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof ApiError && error.status === 401
 }
 
 export default App

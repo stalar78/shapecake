@@ -434,12 +434,22 @@ p {
   overflow: hidden;
 }
 
+.site-settings-image-preview {
+  max-height: 420px;
+  max-width: 760px;
+  width: 100%;
+}
+
 .image-frame img,
 .mini-card img {
   display: block;
   height: 100%;
   object-fit: cover;
   width: 100%;
+}
+
+.site-settings-image-preview img {
+  object-fit: contain;
 }
 
 .toggles {
