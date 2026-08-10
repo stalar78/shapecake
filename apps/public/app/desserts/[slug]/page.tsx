@@ -2,11 +2,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicDessert, getPublicReviews, getPublicSiteSettings } from "@cake-and-shape/api-client";
+import { OrderContactCta } from "../../components/OrderContactCta";
 import { PublicFooter } from "../../components/PublicFooter";
 import { PublicHeader } from "../../components/PublicHeader";
 import { formatPrice } from "../../components/format";
-import { InquiryForm } from "../../InquiryForm";
-import { absoluteMediaUrl, browserApiBaseUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
+import { absoluteMediaUrl, dessertDescription, dessertJsonLd, jsonLd, siteUrl } from "../../seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -109,8 +109,8 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
 
-        <section className="public-shell py-12">
-          <InquiryForm apiBaseUrl={browserApiBaseUrl} dessert={dessert} />
+        <section id="order-contact" className="public-shell py-12">
+          <OrderContactCta dessertName={dessert.is_available ? dessert.name : undefined} settings={settings} />
         </section>
       </main>
       <PublicFooter settings={settings} />

@@ -9,10 +9,10 @@ import {
   getPublicSiteSettings,
 } from "@cake-and-shape/api-client";
 import { DessertCard } from "./components/DessertCard";
+import { OrderContactCta } from "./components/OrderContactCta";
 import { PublicFooter } from "./components/PublicFooter";
 import { PublicHeader } from "./components/PublicHeader";
-import { InquiryForm } from "./InquiryForm";
-import { absoluteMediaUrl, browserApiBaseUrl, businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
+import { absoluteMediaUrl, businessJsonLd, defaultDescription, jsonLd, siteName, siteUrl } from "./seo";
 
 const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
 
@@ -70,7 +70,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               {settings?.hero_text || "Авторские торты и десерты для праздников, камерных встреч и личных поводов."}
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-5">
-              <Link className="button-primary" href="#inquiry">Заказать</Link>
+              <Link className="button-primary" href="#order-contact">Заказать</Link>
               <Link className="button-secondary" href="#catalog">Смотреть десерты</Link>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
               <p className="eyebrow">Ремесло</p>
               <h2 className="display mt-3 text-5xl font-semibold leading-none md:text-6xl">Тихая роскошь ручной работы</h2>
               <p className="mt-6 max-w-xl text-base leading-8 text-[var(--muted)]">
-                В центре Cake &amp; Shape — сам десерт: вкус, аккуратная подача и внимание к деталям. Каталог помогает выбрать основу, а пожелания к событию можно обсудить в заявке.
+                В центре Cake &amp; Shape — сам десерт: вкус, аккуратная подача и внимание к деталям. Каталог помогает выбрать основу, а пожелания к событию можно обсудить напрямую.
               </p>
             </div>
             <div className="media-frame aspect-[4/3]">
@@ -160,9 +160,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
         <section className="public-shell section-rule py-16 md:py-24">
           <p className="eyebrow">Процесс</p>
-          <h2 className="display mt-3 max-w-2xl text-5xl font-semibold leading-none md:text-6xl">Как оформить запрос</h2>
+          <h2 className="display mt-3 max-w-2xl text-5xl font-semibold leading-none md:text-6xl">Как обсудить заказ</h2>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {["Выберите десерт или опишите идею", "Укажите дату, формат получения и детали", "Мы свяжемся с вами по выбранному каналу"].map((item, index) => (
+            {["Выберите десерт или определитесь с идеей", "Напишите удобным способом и расскажите о дате", "Обсудим формат получения и детали оформления"].map((item, index) => (
               <article className="border-t border-[var(--line)] pt-6" key={item}>
                 <span className="display text-6xl font-semibold text-[var(--primary)]">0{index + 1}</span>
                 <p className="mt-5 text-sm leading-7 text-[var(--muted)]">{item}</p>
@@ -209,14 +209,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
             {[["Как заказать", settings?.order_terms_text], ["Доставка", settings?.delivery_text], ["Самовывоз", settings?.pickup_text], ["Предоплата", settings?.prepayment_text]].map(([title, text]) => (
               <article className="border-t border-[var(--line)] pt-6" key={title}>
                 <h3 className="display text-3xl font-semibold">{title}</h3>
-                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{text || "Подробности можно уточнить при оформлении запроса."}</p>
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[var(--muted)]">{text || "Подробности можно уточнить при обсуждении заказа."}</p>
               </article>
             ))}
           </div>
         </section>
 
-        <section id="inquiry" className="public-shell py-10 md:py-16">
-          <InquiryForm apiBaseUrl={browserApiBaseUrl} categories={categories} desserts={catalog?.items ?? []} />
+        <section id="order-contact" className="public-shell py-10 md:py-16">
+          <OrderContactCta settings={settings} />
         </section>
       </main>
       <PublicFooter settings={settings} />
