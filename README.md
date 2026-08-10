@@ -4,7 +4,16 @@ Custom production website and administration application for a small dessert bus
 
 ## Current stage
 
-Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow, Stage 04 reviews/promotions, Stage 05 site content/settings/operational overview, Stage 06 order-request contract completion, Stage 07 SEO/public discoverability, and Stage 08 Lovable-based public design integration are accepted and committed. The next stage is Stage 09: production readiness and deployment.
+Stages 01-09 are accepted. The MVP is deployed to production and the project has moved from launch preparation to controlled post-launch operations.
+
+Production endpoints:
+
+- public: `https://cakeshape.ru`;
+- public alias: `https://www.cakeshape.ru`;
+- admin: `https://admin.cakeshape.ru`;
+- API health: `https://cakeshape.ru/api/health`.
+
+The first post-launch infrastructure priority is off-site backup storage so that production backups do not live only on the same VPS as the application.
 
 ## Approved MVP
 
@@ -17,7 +26,7 @@ Stage 01 foundation, Stage 02 catalog domain, Stage 03 customer inquiry workflow
 - PostgreSQL-backed FastAPI API;
 - Next.js public frontend;
 - Vite React admin frontend;
-- Docker Compose deployment foundation.
+- production Docker Compose deployment behind Nginx and HTTPS.
 
 Online payments, customer accounts, delivery integrations, warehouse accounting, loyalty features and a full CRM are outside the MVP.
 
@@ -110,7 +119,7 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 ## Stage 08 public visual integration
 
 - the customer-approved Lovable concept was integrated into the existing Next.js public application rather than replacing its architecture;
-- the public visual system now uses a warm editorial patisserie direction with Cormorant Garamond and Manrope, restrained radii, image-led cards, editorial spacing and accessible focus states;
+- the public visual system uses a warm editorial patisserie direction with Cormorant Garamond and Manrope, restrained radii, image-led cards, editorial spacing and accessible focus states;
 - reusable public header, footer and dessert-card components were introduced;
 - homepage, dessert detail, promotion detail and inquiry presentation were redesigned around real API-backed data only;
 - customer-facing copy was cleaned of implementation/developer language and no Lovable mock business facts were imported;
@@ -119,11 +128,31 @@ Online payments, customer accounts, delivery integrations, warehouse accounting,
 - public lint, typecheck and production build passed before acceptance;
 - merge commit: `0d3f851`.
 
+## Stage 09 production readiness and launch
+
+- dedicated `docker-compose.prod.yml` production topology with persistent PostgreSQL and media volumes;
+- production-only environment configuration with secrets kept outside Git;
+- Nginx reverse proxy for public, admin and API traffic;
+- real production domains `cakeshape.ru`, `www.cakeshape.ru` and `admin.cakeshape.ru`;
+- HTTPS on ports 80/443 with HTTP -> HTTPS redirects;
+- Let's Encrypt certificate provisioning and automatic Certbot renewal with tested standalone renewal hooks;
+- health checks for PostgreSQL, API, public and admin services;
+- production database/media snapshot restored and verified before launch;
+- administrator login verified over HTTPS;
+- public site, admin site and API health routes verified in production;
+- daily systemd-driven PostgreSQL + media backup with SHA256 manifests and 14-day on-host retention;
+- production launch accepted on 2026-08-10;
+- production HTTPS baseline commit: `2567c6a`.
+
+See `docs/STAGE_09_ACCEPTANCE.md` and `docs/PRODUCTION_RUNBOOK.md` for the production acceptance record and operating procedure.
+
 ## Working model
 
 GPT acts as project architect and maintains project documentation and GitHub history. Codex handles complex implementation tasks. Lovable provides the visual design reference for the public application.
 
 Implementation workflow for substantial stages: feature branch -> agent implementation -> push -> GPT GitHub review -> fixes in the same branch -> acceptance -> merge to `master`.
+
+Production operations follow a stricter sequence: production backup -> approved revision -> configuration validation -> migration/build/recreate -> health checks -> browser smoke -> rollback decision if required.
 
 ## Local project path
 
