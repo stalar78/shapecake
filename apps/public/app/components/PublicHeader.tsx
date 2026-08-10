@@ -27,7 +27,7 @@ export function PublicHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-3">
-          <Link className="button-primary hidden sm:inline-flex" href="/#inquiry">
+          <Link className="button-primary hidden sm:inline-flex" href="/#order-contact">
             Заказать
           </Link>
           <button
@@ -49,7 +49,7 @@ export function PublicHeader() {
                 {label}
               </Link>
             ))}
-            <Link className="button-primary mt-3 w-fit" href="/#inquiry" onClick={() => setOpen(false)}>
+            <Link className="button-primary mt-3 w-fit" href="/#order-contact" onClick={() => setOpen(false)}>
               Заказать десерт
             </Link>
           </div>

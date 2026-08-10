@@ -8,7 +8,6 @@ import type {
 export const siteName = "Cake & Shape";
 export const defaultDescription = "Авторские торты и десерты ручной работы для красивых моментов.";
 export const apiBaseUrl = process.env.PUBLIC_API_BASE_URL ?? "http://localhost:8000/api";
-export const browserApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api";
 export const publicMediaOrigin = process.env.PUBLIC_MEDIA_ORIGIN ?? process.env.PUBLIC_SITE_ORIGIN ?? process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "http://localhost:3000";
 
 export function publicOrigin(): URL {
