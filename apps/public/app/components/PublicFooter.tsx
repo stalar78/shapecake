@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { SiteSettings } from "@cake-and-shape/api-client";
 
 export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
+  const phoneHref = phoneLink(settings?.phone);
   const socials = [
     ["WhatsApp", settings?.whatsapp_url],
     ["Telegram", settings?.telegram_url],
@@ -33,11 +34,27 @@ export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
           <dl className="grid content-start gap-5 text-sm">
             <div>
               <dt className="font-bold text-[var(--champagne)]">Телефон</dt>
-              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">{settings?.phone || "Не указан"}</dd>
+              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">
+                {settings?.phone && phoneHref ? (
+                  <a className="transition-colors hover:text-[var(--surface)]" href={phoneHref}>
+                    {settings.phone}
+                  </a>
+                ) : (
+                  "Не указан"
+                )}
+              </dd>
             </div>
             <div>
               <dt className="font-bold text-[var(--champagne)]">Email</dt>
-              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">{settings?.email || "Не указан"}</dd>
+              <dd className="mt-1 text-[rgba(250,247,242,0.72)]">
+                {settings?.email ? (
+                  <a className="transition-colors hover:text-[var(--surface)]" href={`mailto:${settings.email}`}>
+                    {settings.email}
+                  </a>
+                ) : (
+                  "Не указан"
+                )}
+              </dd>
             </div>
             <div>
               <dt className="font-bold text-[var(--champagne)]">Адрес</dt>
@@ -67,4 +84,9 @@ export function PublicFooter({ settings }: { settings: SiteSettings | null }) {
       </div>
     </footer>
   );
+}
+
+function phoneLink(phone?: string) {
+  const normalized = phone?.replace(/[^\d+]/g, "");
+  return normalized ? `tel:${normalized}` : null;
 }
