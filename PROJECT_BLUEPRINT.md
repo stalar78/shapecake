@@ -3,9 +3,13 @@
 ## Identity
 
 - Owner: stalar78
-- Current stage: Stage 08 fully accepted; Stage 09 ready to start
+- Current stage: Stage 09 accepted; production is live
 - Repository: `stalar78/shapecake`
 - Local path: `C:\Users\stala\OneDrive\Рабочий стол\Dev\shapecake`
+- Production VPS hostname: `cakeshape-prod`
+- Production VPS IPv4: `159.194.228.151`
+- Public site: `https://cakeshape.ru`
+- Admin site: `https://admin.cakeshape.ru`
 
 ## Purpose
 
@@ -13,19 +17,39 @@ A custom public dessert catalog and a purpose-built administration application f
 
 ## MVP scope
 
-Included: public storefront, catalog and dessert pages, custom admin, categories, products, variants, media, customer requests, reviews, promotions, site settings, notifications, SEO foundation, final public visual integration, Docker/VPS deployment.
+Included: public storefront, catalog and dessert pages, custom admin, categories, products, variants, media, customer requests, reviews, promotions, site settings, notifications boundary, SEO foundation, final public visual integration, Docker/VPS deployment, HTTPS and production backup operations.
 
 Excluded: online payments, customer accounts, delivery integrations, warehouse accounting, loyalty program, full CRM, mobile applications.
 
-## Architecture
+## Production architecture
 
 ```text
-Public Next.js app ─┐
-                    ├─> FastAPI modular monolith ─> PostgreSQL
-Admin Vite app ─────┘              │
-                                   ├─> media storage adapter
-                                   └─> notification adapter
+Internet
+   |
+   | 80 / 443
+   v
+Docker Nginx
+   |-------------------------------|
+   |               |               |
+   v               v               v
+Next.js public   Vite admin       FastAPI
+                                   |
+                                   v
+                               PostgreSQL
+                                   |
+                                   +--> persistent media volume
 ```
+
+Only Nginx is intentionally internet-facing. PostgreSQL, API, public and admin service ports remain internal to the production Docker network.
+
+Production Compose: `docker-compose.prod.yml`.
+
+Production environment: `/opt/cakeshape/.env.production`, server-local and never committed.
+
+Production persistent volumes:
+
+- `cakeshape_prod_postgres_prod_data`;
+- `cakeshape_prod_api_prod_media`.
 
 ## Accepted stages
 
@@ -59,48 +83,93 @@ SEO/discoverability: validated canonical public origin, native Next.js route met
 
 ### Stage 08
 
-Public visual integration: customer-approved Lovable editorial patisserie concept integrated into the existing Next.js public application without replacing the production architecture. The stage introduced the final warm editorial palette, Cormorant Garamond + Manrope typography, reusable public header/footer/dessert-card components, redesigned homepage/detail/promotion/inquiry surfaces, responsive navigation and accessible focus/reduced-motion behavior. Real API-backed content and the production inquiry workflow were preserved, no Lovable mock business data was imported, and Stage 07 SEO/analytics contracts remained intact. Public lint, typecheck and production build passed. Merged in `0d3f851`.
+Public visual integration: customer-approved Lovable editorial patisserie concept integrated into the existing Next.js public application without replacing the production architecture. Real API-backed content and the production inquiry workflow were preserved. Public lint, typecheck and production build passed. Merged in `0d3f851`.
+
+### Stage 09
+
+Production readiness and launch: dedicated production Compose topology, hardened production environment contract, persistent PostgreSQL/media storage, Nginx routing, real production domains, Let's Encrypt TLS, HTTP-to-HTTPS redirects, production health checks, migration sequencing, administrator access, production data restore, production browser/API smoke, Certbot renewal validation, and daily PostgreSQL/media backups with SHA256 manifests.
+
+Production HTTPS baseline commit: `2567c6a` (`feat: enable production HTTPS`).
+
+Stage 09 production launch was accepted on 2026-08-10.
+
+## Production operations
+
+Primary runbook: `docs/PRODUCTION_RUNBOOK.md`.
+
+Production acceptance record: `docs/STAGE_09_ACCEPTANCE.md`.
+
+Mandatory operating sequence for significant deployments:
+
+```text
+fresh production backup
+-> approved Git revision
+-> Compose validation
+-> migration/build/recreate
+-> container health verification
+-> HTTPS/API/browser smoke
+-> rollback decision if required
+```
+
+Production database/media are authoritative after launch. Never restore the original local/pre-production snapshot over live production data during a normal release.
+
+Never use `docker compose down -v` in production.
+
+## Backups
+
+Current on-host production backup:
+
+- script: `/usr/local/sbin/cakeshape-backup`;
+- destination: `/var/backups/cakeshape`;
+- contents: PostgreSQL custom-format dump, media archive, SHA256 manifest;
+- schedule: daily through `cakeshape-backup.timer` at 02:30 UTC with up to 10 minutes randomized delay;
+- on-host retention: 14 days.
+
+The first post-launch infrastructure priority is encrypted off-site backup storage. Current on-host backups protect against deployment/data incidents but do not protect against total VPS loss.
+
+## TLS operations
+
+Certbot manages the production certificate for:
+
+- `cakeshape.ru`;
+- `www.cakeshape.ru`;
+- `admin.cakeshape.ru`.
+
+The certificate is mounted read-only into the Docker Nginx container. Certbot uses standalone validation with pre/post hooks that stop only the production Nginx container for validation and start that container again afterward. Renewal dry-run passed during launch.
 
 ## Security invariants
 
 - Session token is stored only in an HttpOnly cookie; only its hash is persisted.
 - No authentication tokens in localStorage.
 - Mutating admin endpoints require CSRF protection.
-- Test schema reset requires a guarded test database and explicit `ALLOW_TEST_DATABASE_RESET=yes` opt-in.
-- Production API images exclude test tooling.
+- Test schema reset requires a guarded test database and explicit opt-in.
 - Uploaded filenames never control storage paths.
 - Public APIs never expose absolute media filesystem paths.
 - Public inquiries never expose sequential database identifiers or administrator-only notes.
 - Customer contact data and inquiry messages are not logged.
-- Client-supplied `X-Forwarded-For` is not trusted for rate-limit identity without an explicit trusted-proxy design.
-- Public reviews/promotions have no mutation endpoints and expose only explicitly public fields.
-- Promotion schedule timestamps accepted by the API are timezone-aware and normalized to UTC.
-- Site-setting contact URLs are empty or absolute HTTPS URLs; unsafe schemes are rejected at the API boundary.
-- Admin overview is authenticated, read-only, SQL-backed and intentionally excludes unnecessary inquiry PII.
-- Inquiry variant snapshots are server-derived; client-supplied snapshot data is not trusted.
-- Public order requests require an available public dessert, and selected variants must belong to that dessert and be active/available.
-- Canonical public URLs are derived only from controlled configuration, not arbitrary request Host/forwarded headers.
+- Client-supplied forwarding headers are not trusted outside the controlled production proxy boundary.
+- Site-setting contact URLs reject unsafe schemes at the API boundary.
+- Inquiry variant snapshots are server-derived.
+- Canonical public URLs are derived from controlled configuration.
 - JSON-LD contains only public data and is serialized safely for script embedding.
-- Secrets and real customer data never enter Git.
-- Production writes and deployment require explicit approval.
+- Secrets, certificates/private keys and real customer data never enter Git.
+- PostgreSQL is not publicly exposed.
+- Production data volumes are never removed as a routine operation.
+- Production writes/deployments require explicit owner approval.
 
-## Current risks
+## Current operational risks / deferred items
 
-- The in-memory login and inquiry rate limiters are single-instance only and must be replaced before horizontal API scaling.
+- Current automatic backups still live on the production VPS until off-site replication is implemented.
+- The in-memory login and inquiry rate limiters are single-instance only; revisit before horizontal API scaling.
+- Notification integration remains behind the accepted adapter boundary and may require a dedicated production delivery provider if business operations demand it.
+- Promotion/review/global media remain limited by the dessert-oriented media subsystem.
 - Alembic has a low-priority `path_separator` deprecation warning.
-- Local media storage is development-oriented and requires a production persistence/backup decision.
-- Promotion/review/global media remain limited by the dessert-specific media subsystem.
-- Notification integration currently uses a development-safe adapter; production provider integration remains a deployment decision.
-- Customer-facing currency is not yet explicitly established in repository contracts, so Stage 08 intentionally avoided inventing a currency symbol.
-- Production Nginx/HTTPS/backups/deployment configuration is incomplete; `infra/nginx` currently has no production configuration.
-- Stage 08 automated frontend checks passed, but full manual browser/runtime smoke should be repeated against the production-like Stage 09 environment before launch acceptance.
+- Additional monitoring/alerting should be driven by observed production needs rather than architectural speculation.
 
-## Next stage
+## Next phase
 
-Stage 09: production readiness and deployment.
+The MVP is launched. The next phase is controlled post-launch operations rather than a new product stage.
 
-The application now has accepted domain functionality, public SEO/discoverability and the final customer-approved public visual system. Stage 09 prepares a reproducible Ubuntu VPS deployment without changing the accepted product model.
+Immediate priority: implement encrypted off-site backups and verify recovery from an off-site copy.
 
-Primary goals: production Docker Compose/runtime configuration, Nginx reverse proxy, domain and HTTPS/TLS setup, environment hardening, persistent PostgreSQL/media storage, backup and restore procedure, trusted-proxy/rate-limit decisions, production notification-provider decision, deployment/runbook documentation, and final end-to-end smoke of public/admin/inquiry/SEO behavior.
-
-Stage 09 must not introduce unrelated product features. Any remaining non-launch-critical product gaps stay in the post-MVP backlog unless they block safe production operation.
+After that, changes should be driven by production observations, owner/client requests, analytics, operational needs and explicitly approved product backlog items.
