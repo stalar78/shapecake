@@ -670,7 +670,7 @@ function InquiryPanel({
         </button>
       </div>
 
-      {selectedInquiry ? <InquiryDetail inquiry={selectedInquiry} run={run} /> : null}
+      {selectedInquiry ? <InquiryDetail key={selectedInquiry.id} inquiry={selectedInquiry} run={run} /> : null}
     </section>
   )
 }
@@ -826,7 +826,7 @@ function ReviewPanel({
           </div>
         ))}
       </div>
-      {selectedReview ? <ReviewEditor review={selectedReview} desserts={desserts} run={run} /> : null}
+      {selectedReview ? <ReviewEditor key={selectedReview.id} review={selectedReview} desserts={desserts} run={run} /> : null}
     </section>
   )
 }
@@ -982,7 +982,7 @@ function PromotionPanel({
           </div>
         ))}
       </div>
-      {selectedPromotion ? <PromotionEditor promotion={selectedPromotion} desserts={desserts} run={run} /> : null}
+      {selectedPromotion ? <PromotionEditor key={selectedPromotion.id} promotion={selectedPromotion} desserts={desserts} run={run} /> : null}
     </section>
   )
 }
@@ -1246,7 +1246,7 @@ function DessertPanel({
 
       <div className="catalog-detail">
         {selectedDessert ? (
-          <DessertEditor dessert={selectedDessert} categories={categories} run={run} />
+          <DessertEditor key={selectedDessert.id} dessert={selectedDessert} categories={categories} run={run} />
         ) : (
           <section className="card empty-state">
             <h3>Выберите десерт</h3>
