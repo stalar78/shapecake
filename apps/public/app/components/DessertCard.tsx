@@ -14,7 +14,7 @@ export function DessertCard({
   large?: boolean
 }) {
   return (
-    <Link className="group flex h-full flex-col" href={`/desserts/${dessert.slug}`}>
+    <Link className={large ? "group flex flex-col self-start" : "group flex h-full flex-col"} href={`/desserts/${dessert.slug}`}>
       <div className={`media-frame ${large ? "aspect-[4/5]" : "aspect-[4/5]"}`}>
         {dessert.primary_image ? (
           // eslint-disable-next-line @next/next/no-img-element
