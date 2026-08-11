@@ -246,6 +246,53 @@ async def test_public_catalog_total_and_pagination_ignore_variantless_desserts(
     assert [item["slug"] for item in body["items"]] == ["cake-2", "cake-3"]
 
 
+async def test_public_catalog_summary_includes_nutrition_values_and_preserves_nulls(
+    client: AsyncClient,
+    db_session: AsyncSession,
+) -> None:
+    csrf = await _login(client, db_session)
+    category = await _category(client, csrf)
+
+    populated = await _draft(client, csrf, int(category["id"]), "nutrition-rich")
+    await _variant(client, csrf, int(populated["id"]))
+    populated_update = await client.patch(
+        f"/api/admin/desserts/{populated['id']}",
+        json={
+            "calories": 99,
+            "proteins": "6.50",
+            "fats": "10.00",
+            "carbohydrates": "11.25",
+            "is_published": True,
+            "sort_order": 0,
+        },
+        headers={"x-csrf-token": csrf},
+    )
+    assert populated_update.status_code == 200
+
+    empty = await _draft(client, csrf, int(category["id"]), "nutrition-empty")
+    await _variant(client, csrf, int(empty["id"]))
+    empty_update = await client.patch(
+        f"/api/admin/desserts/{empty['id']}",
+        json={"is_published": True, "sort_order": 1},
+        headers={"x-csrf-token": csrf},
+    )
+    assert empty_update.status_code == 200
+
+    response = await client.get("/api/public/catalog")
+    assert response.status_code == 200
+    items = {item["slug"]: item for item in response.json()["items"]}
+
+    assert items["nutrition-rich"]["calories"] == 99
+    assert items["nutrition-rich"]["proteins"] == "6.50"
+    assert items["nutrition-rich"]["fats"] == "10.00"
+    assert items["nutrition-rich"]["carbohydrates"] == "11.25"
+
+    assert items["nutrition-empty"]["calories"] is None
+    assert items["nutrition-empty"]["proteins"] is None
+    assert items["nutrition-empty"]["fats"] is None
+    assert items["nutrition-empty"]["carbohydrates"] is None
+
+
 async def test_publish_requires_active_variant_and_last_variant_archive_is_rejected(
     client: AsyncClient,
     db_session: AsyncSession,

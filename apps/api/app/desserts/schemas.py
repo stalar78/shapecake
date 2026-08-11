@@ -230,6 +230,10 @@ class PublicDessertSummary(BaseModel):
     name: str
     slug: str
     short_description: str
+    calories: int | None
+    proteins: Decimal | None
+    fats: Decimal | None
+    carbohydrates: Decimal | None
     is_available: bool
     is_sugar_free: bool
     is_gluten_free: bool
@@ -247,10 +251,6 @@ class PublicDessertDetail(PublicDessertSummary):
     ingredients: str
     allergens: str
     warnings: str
-    calories: int | None
-    proteins: Decimal | None
-    fats: Decimal | None
-    carbohydrates: Decimal | None
     preparation_time_text: str
     images: list[DessertImageResponse]
 

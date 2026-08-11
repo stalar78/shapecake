@@ -186,6 +186,18 @@ img {
   text-underline-offset: 0.35em;
 }
 
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (min-width: 768px) {
   .public-shell {
     width: min(84rem, calc(100% - 5rem));

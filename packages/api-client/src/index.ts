@@ -42,6 +42,10 @@ export type PublicDessertSummary = {
   name: string
   slug: string
   short_description: string
+  calories: number | null
+  proteins: string | null
+  fats: string | null
+  carbohydrates: string | null
   is_available: boolean
   is_sugar_free: boolean
   is_gluten_free: boolean
@@ -59,10 +63,6 @@ export type PublicDessertDetail = PublicDessertSummary & {
   ingredients: string
   allergens: string
   warnings: string
-  calories: number | null
-  proteins: string | null
-  fats: string | null
-  carbohydrates: string | null
   preparation_time_text: string
   images: DessertImage[]
 }
