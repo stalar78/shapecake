@@ -14,7 +14,7 @@ export function DessertCard({
   large?: boolean
 }) {
   return (
-    <Link className="group block" href={`/desserts/${dessert.slug}`}>
+    <Link className="group flex h-full flex-col" href={`/desserts/${dessert.slug}`}>
       <div className={`media-frame ${large ? "aspect-[4/5]" : "aspect-[4/5]"}`}>
         {dessert.primary_image ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -27,7 +27,7 @@ export function DessertCard({
           <div className="media-placeholder text-sm">Фото десерта скоро появится.</div>
         )}
       </div>
-      <div className="mt-4">
+      <div className="mt-4 flex flex-1 flex-col">
         <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] pb-3">
           <h3
             className={`display font-semibold leading-none group-hover:text-[var(--primary-strong)] ${large ? "text-5xl" : "text-3xl"}`}
@@ -39,16 +39,18 @@ export function DessertCard({
         <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
           {dessert.short_description || "Описание скоро появится в каталоге."}
         </p>
-        <NutritionFacts
-          calories={dessert.calories}
-          carbohydrates={dessert.carbohydrates}
-          fats={dessert.fats}
-          large={large}
-          proteins={dessert.proteins}
-        />
         {!dessert.is_available ? (
           <p className="mt-2 text-sm font-bold text-[var(--primary-strong)]">Сейчас недоступен для заказа</p>
         ) : null}
+        <div className="mt-auto border-b border-[var(--line)] pb-5">
+          <NutritionFacts
+            calories={dessert.calories}
+            carbohydrates={dessert.carbohydrates}
+            fats={dessert.fats}
+            large={large}
+            proteins={dessert.proteins}
+          />
+        </div>
       </div>
     </Link>
   )
