@@ -37,6 +37,8 @@ Never run `docker compose down -v` in production.
 - Certificates/private keys are not committed to Git.
 - Production media and database data are not committed to Git.
 - Do not trust arbitrary client-supplied forwarding headers outside the controlled Nginx boundary.
+- `admin.cakeshape.ru` responses send `X-Robots-Tag: noindex, nofollow`; the admin interface must remain excluded from search indexing.
+- The public `cakeshape.ru` site remains indexable and continues to expose its normal `robots.txt` and sitemap.
 
 ## Current Production Topology
 
