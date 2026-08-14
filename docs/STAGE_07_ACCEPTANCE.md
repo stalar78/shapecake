@@ -22,7 +22,7 @@ Implementation commit:
 - sitemap uses deterministic offsets, API totals, empty-page termination, defensive page cap and URL deduplication;
 - dynamic sitemap failures degrade to the safe root entry rather than breaking generation;
 - Bakery JSON-LD uses only existing public site-setting data;
-- Product JSON-LD uses only existing public dessert data without invented offers/prices;
+- Product JSON-LD uses only existing public dessert data, includes one real Offer derived from existing dessert variant pricing, invents no prices/reviews/ratings/shipping/availability data, and is not emitted when no variant exists;
 - JSON-LD serialization escapes script-breaking `<` characters;
 - dessert Open Graph can reuse the existing public media URL;
 - optional Google Analytics and Yandex Metrica integrations emit no tracking scripts without valid explicit environment configuration;

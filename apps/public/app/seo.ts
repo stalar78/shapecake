@@ -71,7 +71,11 @@ export function businessJsonLd(settings: SiteSettings | null): Record<string, un
   });
 }
 
-export function dessertJsonLd(dessert: PublicDessertDetail): Record<string, unknown> {
+export function dessertJsonLd(dessert: PublicDessertDetail): Record<string, unknown> | null {
+  const variant = selectOfferVariant(dessert);
+  if (!variant) {
+    return null;
+  }
   const image = absoluteMediaUrl(dessert.primary_image?.url ?? dessert.images[0]?.url);
   return compact({
     "@context": "https://schema.org",
@@ -80,6 +84,13 @@ export function dessertJsonLd(dessert: PublicDessertDetail): Record<string, unkn
     description: dessert.full_description || dessert.short_description || undefined,
     category: dessert.category_slug,
     image: image ? [image] : undefined,
+    offers: {
+      "@type": "Offer",
+      url: siteUrl(`/desserts/${dessert.slug}`).toString(),
+      priceCurrency: "RUB",
+      price: variant.price / 100,
+      availability: variant.is_available ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    },
   });
 }
 
@@ -98,4 +109,9 @@ function compact<T extends Record<string, unknown>>(value: T): T {
     }
   }
   return value;
+}
+
+function selectOfferVariant(dessert: PublicDessertDetail): PublicDessertDetail["variants"][number] | undefined {
+  const variants = [...dessert.variants].sort((first, second) => first.price - second.price);
+  return variants.find((variant) => variant.is_available) ?? variants[0];
 }

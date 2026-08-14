@@ -39,13 +39,14 @@ export default async function DessertPage({ params }: { params: Promise<{ slug: 
     getPublicReviews(apiBaseUrl, { dessert_id: dessert.id, limit: 6 }).catch(() => null),
     getPublicSiteSettings(apiBaseUrl).catch(() => null),
   ])
+  const productJsonLd = dessert.is_available ? dessertJsonLd(dessert) : null
 
   return (
     <>
       <PublicHeader />
       <main>
-        {dessert.is_available ? (
-          <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(dessertJsonLd(dessert))} />
+        {productJsonLd ? (
+          <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(productJsonLd)} />
         ) : null}
         <section className="public-shell grid gap-12 py-12 md:py-20 lg:grid-cols-[1.08fr_0.92fr]">
           <div className="grid gap-4">
